@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="css/widgets.css">
     <script src="scripts/jquery-3.3.1.js"></script>
     <script src="scripts/common.js"></script>
-    <script src="scripts/PlansWorkTrend.js"></script>
+    <script src="scripts/PlansKanban.js"></script>
     <script>
         function initialize(){
             if (typeof RTCWidget == 'undefined'){
@@ -99,63 +99,18 @@
     <div style='display:none;width:100%;' id='reportContentDiv'>
         <div style='height:26px;'>
             <div style='float:left;font-size:14pt;padding-bottom:5px;padding-right:5px;'>
-                Work Trend - <span id='curPlanName'></span>
+                <span id='curPlanName'></span> Kanban
             </div>
             <div style='float:left'>
                 <svg onclick='showOptions()' width='12' class='svgButton' viewBox='0 0 60 74' xmlns='http://www.w3.org/2000/svg'>
                     <path d="M57,32h-2.58c-1.374-3.881-5.067-6.667-9.419-6.667S36.955,28.119,35.581,32H3c-1.657,0-3,1.343-3,3c0,1.656,1.343,3,3,3h32.371c1.168,4.224,5.031,7.334,9.629,7.334s8.461-3.107,9.629-7.334H57c1.657,0,3-1.344,3-3 C60,33.343,58.657,32,57,32z"/>
-                                        <path d="M57,58H24.419c-1.374-3.881-5.067-6.666-9.419-6.666S6.955,54.119,5.581,58H3c-1.657,0-3,1.344-3,3 s1.343,3,3,3h2.371c1.168,4.227,5.031,7.334,9.629,7.334s8.461-3.107,9.629-7.334H57c1.657,0,3-1.344,3-3S58.657,58,57,58z"/>
+                    <path d="M57,58H24.419c-1.374-3.881-5.067-6.666-9.419-6.666S6.955,54.119,5.581,58H3c-1.657,0-3,1.344-3,3 s1.343,3,3,3h2.371c1.168,4.227,5.031,7.334,9.629,7.334s8.461-3.107,9.629-7.334H57c1.657,0,3-1.344,3-3S58.657,58,57,58z"/>
                     <path d="M3,13h2.371c1.168,4.227,5.031,7.333,9.629,7.333s8.467-3.107,9.629-7.333H57c1.657,0,3-1.343,3-3 s-1.343-3-3-3H24.419C23.045,3.119,19.352,0.333,15,0.333S6.955,3.119,5.581,7H3c-1.657,0-3,1.343-3,3S1.343,13,3,13z"/>
                 </svg>
             </div>
         </div>
-        <div id='chartContents' style='position:relative;font-size:9pt;border-style:solid;border-color:rgb(245,245,245);border-width:2px;'>
-            <div class="legend" style="cursor:default;position:fixed;top:36px;left:10px">
-                <table style="font-size:9pt;">
-                    <tbody id="legendTable"›
-                        <tr>
-                            <td style="margin:2px;width:15px; height:15px; background-color:rgb(255, 230, 171)"></td>
-                            <td>Open</td>
-                        </tr>
-                        <tr>
-                            <td style="margin:2px;width:15px; height:15px; background-color:rgb(174, 255, 215"></td>
-                            <td>Working</td>
-                        </tr>
-                        <tr>
-                            <td style="margin:2px;width:15px; height:15px; background-color:rgb(234, 234, 234)"></td>
-                            <td>Closed</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <svg viewBox='0 0 1000 500' xmlns='http://www.w3.org/2000/svg'>
-                <polygon id='openItems' class='openItems'/>
-                <polygon id='workingItems' class='workingItems'/>
-                <polygon id='closedItems' class='closedItems' stroke='rgb(150,240,150)'/>
-                <text id="nullMessage" style="font-size:30px;cursor:default;display:none;" x="400" y="258">No Work Items</text>
-                <line id='y-1' x1=0 x2=1000 y1=375 y2=375 stroke='rgb(200,200,200)' stroke-dasharray="3 10" shape-rendering="crispEdges" vector-effect="non-scaling-stroke"/>
-                <line id='y-2' x1=0 x2=1000 y1=250 y2=250 stroke='rgb(200,200,200)' stroke-dasharray="3 10" vector-effect="non-scaling-stroke"/>
-                <line id='y-3' x1=0 x2=1000 y1=125 y2=125 stroke='rgb(200,200,200)' stroke-dasharray="3 10" shape-rendering="crispEdges" vector-effect="non-scaling-stroke"/>
-                <line id='x-1' x1=250 x2=250 y1=0 y2=500 stroke='rgb(200,200,200)' stroke-dasharray="3 10" shape-rendering="crispEdges" vector-effect="non-scaling-stroke"/>
-                <line id='x-2' x1=500 x2=500 y1=0 y2=500 stroke='rgb(200,200,200)' stroke-dasharray="3 10" shape-rendering="crispEdges" vector-effect="non-scaling-stroke"/>
-                <line id='x-3' x1=750 x2=750 y1=0 y2=500 stroke='rgb(200,200,200)' stroke-dasharray="3 10" shape-rendering"crispEdges" vector-effect="non-scaling-stroke"/>
-                <line id='todayLine' x1=-10 x2=-10 y1.0 y2=500 stroke='rgb(0,150,0)' stroke-width="2" stroke-dasharray="1000 1" shape-rendering="crispEdges" vector-effect="non-scaling-stroke"/>
-            </svg>
-            <div id='y-axis-labels' style='color:grey'>
-                <div style='position:absolute;top:0px;left:3px;'></div>
-                <div style='position:absolute;top:calc(25% - 13px);left:3px;'></div>
-                <div style='position:absolute;top:calc(50% - 13px);left:3px;'></div>
-                <div style='position:absolute;top:calc(75% - 13px);left:3px;'></div>
-            </div>
-            <div id='x-axis-labels' style='color:grey;'>
-                <div id='xStartDate' style='position:absolute;bottom:-30px;left:0px;'>Long Ago</div>
-                <div id='x1' style='position:absolute;bottom:-15px;left:0px;'></div>
-                <div id='x2' style='position:absolute;bottom:-15px;left:calc(25% - 15px);'></div>
-                <div id='x3' style='position:absolute;bottom:-15px;left:calc(50% - 15px);'></div>
-                <div id='x4' style='position:absolute;bottom:-15px;left:calc(75% - 15px);'></div>
-                <div id='x5' style='position:absolute;bottom:-15px;right:0px;'></div>
-                <div id='xEndDate' style='position:absolute;bottom:-30px;right:0px;'>Now</div>
-            </div>
+        <div id='kanbanDiv' style='position:relative;font-size:9pt;border-style:solid;border-color:rgb(245,245,245);border-width:2px;'>
+            
         </div>
         <div style='height:30px;'></div>
     </div>
