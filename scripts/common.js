@@ -25,7 +25,7 @@ function showOptions(){
     document.getElementById('settingsDiv').style.display = "none";
     url = applicationURL() + "service/com.ibm.team.repository.service.internal.webuiInitializer.IWebUIInitializerRestService/initializationData";
     getREST(url, initialization, true);
-    var url = applicationURL() + "rpt/repository/foundation?fields.projectArea/projectArea[archived=false]/(name|itemId)";
+    var url = applicationURL() + "rpt/repository/foundation?fields=projectArea/projectArea[archived=false]/(name|itemId)";
     getREST(url, setupProjectDD);
 }
 
@@ -42,26 +42,31 @@ function setupProjectDD(projectAreas){
     var selProj = prefs.getString("ProjectId");
     var ddPA = document.getElementById('ddprojectArea');
     ddPA.innerHTML = '';
+    var op = new Option();
+    op.value = "";
+    op.text = "";
+    if (selProj=='') op.selected=true;
+    ddPA.options.add(op);
     var nameKeyPA = new Object();
     for (var project of projectAreas){
         nameKeyPA[project.name] = project.itemId;
     }
     var sortedKeys = Object.keys(nameKeyPA).sort();
     for (var key of sortedKeys){
-        var op = new Option();
+        op = new Option();
         op.value = nameKeyPA[key];
         op.text = key;
         if (op.value==selProj){
-            op.selected.true;
+            op.selected=true;
         }
         ddPA.options.add(op);
     }
-    resized();
     if (selProj!=''){
         selectProject();
     } else {
-        document.getElementById('loadingDiv').style.display - "none";
-        document.getElementById('settingsDive').style.display = '';
+        document.getElementById('loadingDiv').style.display = "none";
+        document.getElementById('settingsDiv').style.display = '';
+        resized();
     }
 }
 
@@ -125,7 +130,7 @@ function setupTeamDD(teamAreas){
     ddTA.innerHTML = '';
     var op = new Option();
     if (selTeam=='All'){
-        op.selected - true;
+        op.selected = true;
     }
     op.value = "All";
     op.text = "All Team Areas";
@@ -209,6 +214,9 @@ function setupPlanDD(Plans){
     var prefs = new gadgets.Prefs();
     var PlanId = prefs.getString("Planid");
     var ddPlan = document.getElementById('ddPlan');
+    if (document.getElementById('planRow')!=null){
+        document.getElementById('planRow').style.display='';
+    }
     var nameKeyPA = new Object();
     for (var Plan of Plans){
         nameKeyPA[Plan.name] = Plan.itemId;
@@ -234,7 +242,7 @@ function setupQueryDD(QueryJSON){
     var prefs = new gadgets.Prefs();
     var queryId = prefs.getString("QueryId");
     var querySelectionDiv = document.getElementById('querySelectionDiv');
-    var queryFolders = QueryJSON[1].response.returnValue.values;
+    var queryFolders = QueryJSON[0].response.returnValue.values;
     var orderedFolders = [];
     for (var folder of queryFolders){
         if (folder.queries!=null){
@@ -257,7 +265,7 @@ function setupQueryDD(QueryJSON){
             if (folder.queries.length>0){
                 qs += "<twistie><twistButton class='svgButton'>";
                 qs += folder.scopeName;
-                qs += "<div class='svgLeft'><svg id='arrowSVG' width='14' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points.'50,20 50,80 80,50 50,20'/></svg></div></twistButton><div id='twistContent' class='hide svgIndented'>";
+                qs += "<div class='svgLeft'><svg id='arrowSVG' width='14' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points='50,20 50,80 80,50 50,20'/></svg></div></twistButton><div id='twistContent' class='hide svgIndented'>";
                 for (var query of folder.queries){
                     var sQu = '';
                     if (queryId==query.itemId){
@@ -284,7 +292,7 @@ function setupQueryDD(QueryJSON){
         document.getElementById('editQueryButton').style.display='';
     } else if (queryId!='') {
         document.getElementById('selectedQueryId').innerHTML = queryId;
-        document.getElementByid('selectedQueryName').innerHTML = "Click the pencil to open the selected query...";
+        document.getElementById('selectedQueryName').innerHTML = "Click the pencil to open the selected query...";
         document.getElementById('editQueryButton').style.display='';
     }
     querySelectionDiv.innerHTML = qs;
@@ -347,11 +355,11 @@ function getPlainAppURL(){
 
 function getNetwork(){
     var appURL = getPlainAppURL().toUpperCase();
-    if (appURL.indexOf("JTS.HILL")){
+    if (appURL.indexOf("JTS.HILL")>-1){
         return "NIPR";
     } else {
-        alert("Widget unable to determine network!");
-        return "UNKNOWN";
+        //alert("Widget unable to determine network!");
+        return "UNKNOWN Network in function getNetwork().";
     }
 }
 function RTCURL(){
@@ -361,6 +369,7 @@ function RTCURL(){
             return "https://jts.hill.af.mil/ccm/";
             break;
         default:
+        return getPlainAppURL();
     }
 }
 
@@ -386,8 +395,10 @@ function getCurrentUser(returnFunction){
 }
 
 function getREST(RESTurl, returnFunction, isJSON){
-if (!(RESTurl.indexOf("&size=")!==-1)){
-    RESTurl+="&size=10000"
+if (RESTurl.indexOf("/rpt/repository")!==-1){
+    if (!(RESTurl.indexOf("&size=")!==-1)){
+        RESTurl+="&size=10000"
+    }
 }
 isJSON = isJSON||false;
 $.ajax({
@@ -395,18 +406,24 @@ $.ajax({
     xhrFields: {withCredentials: true},
     url: RESTurl,
     headers:{
-    'Accept' : 'application/xml'
+    'Accept' : 'application/xml',
     },
     success:function(data){
         if (isJSON){
             var rows = data;
         } else {
-            retItems = data.childNodes[0].childNodes;
+            if (data.childNodes[0].nodeName=='#comment'){
+                retItems = data.childNodes[1].childNodes;
+            } else {
+                retItems = data.childNodes[0].childNodes;
+            }
             var rows = [];
             for (var retItem of retItems){
-                var objl;
-                objI = objParseChildNodes(retItem);
-                rows.push(objI);
+                var objI;
+                if (retItem.nodeName!='#text'){
+                    objI = objParseChildNodes(retItem);
+                    rows.push(objI);
+                }
             }
         }
         returnFunction(rows);
@@ -464,10 +481,10 @@ function returnAllOSLCResults(url){
     return allData;
 }
 
-function runStoredQuery(queryId, returnFunction, propString, removeOSLCMarkup){
+function runStoredQuery(queryId, returnFunction, propString, removeOSLCMarkup){//THIS IS A SYNCHRONOUS FUNCTION CALL, unlike getREST, which is async.
     url = applicationURL() + 'oslc/queries/' + queryId + '/rtc_cm:results.json';
     if (propString!=''){
-        url+= "?oslc_cm.properties." + propString;
+        url+= "?oslc_cm.properties=" + propString;
     }
     var rows = returnAllOSLCResults(url);
     if (removeOSLCMarkup){
@@ -500,6 +517,13 @@ function parseOSLCNodes(element){
 
 function objParseChildNodes(element){
     var returnObj = Object();
+    if (element.attributes != null){
+        if (element.attributes.length>0){
+            for (var attr of element.attributes){
+                returnObj[attr.name] = attr.value;
+            }
+        }
+    }
     if (element.hasChildNodes()){
         if ((element.firstChild.nodeName=="#text") && (element.childNodes.length==1)){
             returnObj = element.firstChild.textContent;
@@ -507,21 +531,33 @@ function objParseChildNodes(element){
             var curName;
             for (var childNode of element.childNodes){
                 curName = childNode.nodeName;
-                curValue = objParseChildNodes(childNode);
-                if (returnObj[curName]==null){
-                    returnObj[curName] = curValue;
-                } else {
-                    if (!(returnObj[curName].constructor===Array)){
-                        var temp = returnObj[curName];
-                        returnObj[curName] = [];
-                        returnObj[curName].push(temp);
+                var processMe = false;
+                if (curName=='#text'){
+                    if (/\S/.test(childNode.textContent)){
+                        processMe = true;
                     }
-                    returnObj[curName].push(curValue);
+                } else {
+                    processMe = true;
+                }
+                if (processMe){
+                    curValue = objParseChildNodes(childNode);
+                    if (returnObj[curName]==null){
+                        returnObj[curName] = curValue;
+                    } else {
+                        if (!(returnObj[curName].constructor===Array)){
+                            var temp = returnObj[curName];
+                            returnObj[curName] = [];
+                            returnObj[curName].push(temp);
+                        }
+                        returnObj[curName].push(curValue);
+                    }
                 }
             }
         }
     } else {
-        returnObj = element.textContent;
+        if (returnObj === Object()){
+            returnObj = element.textContent;
+        } 
     }
     return returnObj;
 }

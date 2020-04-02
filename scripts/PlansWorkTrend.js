@@ -24,12 +24,10 @@ function displayReport(){
             CategoriesReturned = false;
             AllTeamAreasReturned = false;
             //Get the Plan information (This tells us which parent team, and which iteration to use)
-            var url = applicationURL() + "rpt/repository/apt?fields=apt/iterationPlanRecord[itemId=" + PlanId + "]/(name|iteration/(startDate|endDate|itemId)owner/itemId)";
+            var url = applicationURL() + "rpt/repository/apt?fields=apt/iterationPlanRecord[itemId=" + PlanId + "]/(name|iteration/(startDate|endDate|itemId)|owner/itemId)";
             getREST(url, PlanReturn);
             //Get Categories for Project Area (The Team Area is selected by the plan, but all associated categories must be found)
             url = applicationURL() + "rpt/repository/workitem?fields=workitem/category[projectArea/itemId=" + ProjectId + "]/(itemId|teamAreas/itemId)";
-             
-
             getREST(url, CategoriesReturn);
             //Get All Team Areas for Project Area (This is needed so that all children teams to the plan's team may be used in the WI query)
             url = applicationURL() + "rpt/repository/foundation?fields=foundation/projectArea[itemId=" + ProjectId + "]/(allTeamAreas/(itemId|parentTeamArea/itemId))";
@@ -64,9 +62,9 @@ function AllTeamAreasReturn(val){
 
 function RunQuery(){
     var cats = [];
-    var teamlds = [];
+    var teamIds = [];
     var targetId;
-    document.getElementByld('curPlanName').innerHTML = Plan.name;
+    document.getElementById('curPlanName').innerHTML = Plan.name;
     targetId = Plan.iteration.itemId;
     teamIds.push(Plan.owner.itemId);
     for (let step = 0; step < 5; step++){//Look for child team areas, and include up to three levels deep.
@@ -95,15 +93,23 @@ function RunQuery(){
             }
         }
     }
-    Categories = cats;
-    var Filter = "target/itemId=" + targetId + " and (";
-    var addOr = "";
-    for (var cat of cats){
-        Filter += addOr + "category/itemId=" + cat;
-        addOr = " or ";
+    var Filter = "target/itemId=" + targetId;
+    if (cats.length>0){ //If no categorires were found, assume the project owns the plan.
+        Categories = cats;
+        Filter+= " and (";
+        var addOr = "";
+        for (var cat of cats){
+            Filter += addOr + "category/itemId=" + cat;
+            addOr = " or ";
+        }
+        Filter +=")";
+    } else {
+        for (var cat of Categories){
+            cats.push(cat.itemId);
+        }
+        Categories = cats;
     }
-    Filter +=")";
-    var url = applicationURL() + "rpt/repository/workitem?fields.workitem/workItem[" + Filter + "]/(id|itemHistory/(modified|target/itemId|category/itemId|state/group))";
+    var url = applicationURL() + "rpt/repository/workitem?fields=workitem/workItem[" + Filter + "]/(id|itemHistory/(modified|target/itemId|category/itemId|state/group))";
     getREST(url, WorkItemsReturn);
 }
 
@@ -127,16 +133,18 @@ function closeSettings(){
     displayReport();
 }
 
-function showFailure(message){
-    $("#reportTableBody").html(message);
-    document.getElementById('loadingDiv').style.display = "none";
-    document.getElementById('reportContentDiv').style.display = "";
-}
-
 function WorkItemsReturn(workItems){
     WIs = workItems;
-    timeNow = Date.now();
-    showReport();
+    if (WIs.length > 0){
+        timeNow = Date.now();
+        document.getElementById('nullMessage').style.display = "none";
+        showReport();
+    } else {
+        document.getElementById('loadingDiv').style.display = "none";
+        document.getElementById('reportContentDiv').style.display = "";
+        document.getElementById('nullMessage').style.display = "";
+        resized();
+    }
 }
 
 function ParseHistory(curWI){
@@ -183,7 +191,7 @@ function ParseHistory(curWI){
                 unfinalizedClosedDate = false;
             }
             if ((curEntry.target.itemId==curTarget) && (Categories.includes(curEntry.category.itemId))){
-                inPlanSince = curEntry.modified;
+                var inPlanSince = curEntry.modified;
             }
         }
     }
@@ -268,7 +276,7 @@ function showReport(){
         workingRTL.push(closedCount);
         closedRTL.push(0);
         if ((openCount+workingCount+closedCount)>maxHeight){
-            maxHeight = openCount+workingCount+cIosedCount;
+            maxHeight = openCount+workingCount+closedCount;
         }
     }
     if (chartEnd==timeNow){
@@ -329,7 +337,7 @@ function SetupAxisLabels(chartStart, chartEnd){
     var step = diff/4;
     document.getElementById('x1').innerHTML = dispTimeLabel(timeNow - chartStart);
     document.getElementById('x2').innerHTML = dispTimeLabel(timeNow - (chartStart + step));
-    document.getElementByld('x3').innerHTML = dispTimeLabel(timeNow - (chartStart + 2*step));
+    document.getElementById('x3').innerHTML = dispTimeLabel(timeNow - (chartStart + 2*step));
     document.getElementById('x4').innerHTML = dispTimeLabel(timeNow - (chartStart + 3*step));
     document.getElementById('x5').innerHTML = dispTimeLabel(timeNow - chartEnd);
     document.getElementById('xStartDate').innerHTML = prettyDate(chartStart);
