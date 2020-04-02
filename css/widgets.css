@@ -1,0 +1,74 @@
+.hide{
+    display:none;
+}
+.svgButton{
+    color:rgb(50,50,50);
+    background-color:transparent;
+    fill:rgb(190,190,190);
+    cursor:pointer;
+    padding:4px;
+}
+.svgButton:hover{
+    color:rgb(0,0,0);
+    background:radial-gradient(rgba(0,0,0,0.07), rgba(0,0,0,0.07));
+    fill:black;
+}
+.svgHollowButton{
+    stroke:rgb(190,190,190);
+    background-color: transparent;
+    cursor: pointer;
+    padding:4px;
+}
+.svgHollowButton:hover{
+    background:radial-gradient(rgba(0,0,0,0.07), rgba(0,0,0,0.07));
+    stroke:black;
+}
+.svgLeft{
+    padding-right:2px;
+    float:left;
+}
+.svgIndented{
+    padding-left:30px;
+}
+.svgIndented{
+    padding-left:30px;
+}
+.svgRotated{
+    transform:rotate(90deg);
+}
+.svgSelected{
+    display:block;
+    background:radial-gradient(rgba(0,200,0,0.25), rgba(0,255,0,0.25));
+}
+.helpButton{
+    fill:rgb(255,128,128);
+    cursor: pointer;
+    padding:5px;
+    background-color: rgba(0,100,200,0.05);
+    border-radius: 10px;
+}
+.helpButton:hover{
+    background: radial-gradient(rgba(0,100,200,0.2), rgba(0,100,200,0.1));
+    fill:red;
+}
+.queryButton,twistie,twistButton{
+    display:block;
+    -webkit-touch-callout:none;
+    -webkit-user-select:none;
+    -khtml-user-select:none;
+    -moz-user-select:none;
+    -ms-user-select:none;
+    user-select:none;
+}
+.buttonRows{
+    width:100%;
+    font-size:9pt;
+    border-collapse: collapse;
+}
+.buttonRows tr{
+    background-color: white;
+    cursor: pointer;
+}
+.buttonRows tr:hover{
+    background: radial-gradient(rgba(0,100,200,0.2), rgba(0,100,200,0.1));
+}
