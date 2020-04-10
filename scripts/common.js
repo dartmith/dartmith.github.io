@@ -27,6 +27,12 @@ function showOptions(){
     getREST(url, initialization, true);
     var url = applicationURL() + "rpt/repository/foundation?fields=projectArea/projectArea[archived=false]/(name|itemId)";
     getREST(url, setupProjectDD);
+    
+    if (document.getElementById('tbTitle')!=null){
+        var prefs = new gadgets.Prefs();
+        var title = prefs.getString("Title");
+        document.getElementById('tbTitle').value = title;
+    }
 }
 
 function enableSave() {
@@ -430,7 +436,7 @@ $.ajax({
     },
     error:function(error){
         console.error(error);
-        alert('Error returning REST Query results. Possible malformed query.');
+        alert('Your session has expired.\nPlease refresh this page to login.');
     }
 });
 }
@@ -440,6 +446,7 @@ function getRESTJSON(RESTurl, returnFunction){
         async:true,
         xhrFields: {withCredentials: true},
         url: RESTurl,
+        type: 'GET',
         headers:{
         'Accept' : 'text/json'
         },
@@ -449,7 +456,7 @@ function getRESTJSON(RESTurl, returnFunction){
         },
         error: function(error){
             console.error(error);
-            alert('Error returning REST Query results. Possible malformed query.');
+            alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
 }
@@ -475,7 +482,7 @@ function returnAllOSLCResults(url){
         },
         error: function(error){
             console.error(error);
-            alert('Error returning OSLC Query results.');
+            alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
     return allData;
