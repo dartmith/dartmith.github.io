@@ -394,24 +394,27 @@ function dragstart_handler(e) {
 
 function dragover_handler(e) {
 	e.preventDefault();
+	var dt = e.dataTransfer;
     var newLocation = getParentTD(e.target);
-    if (tData.allowedStates.includes(newLocation.id)){
-    	oTooltip.follow(e);
-    	oTooltip.show();
-    	oTooltip.setContent(newLocation.id);
-	    e.currentTarget.classList.add("proposedCol");
-    } else {
-    	oTooltip.follow(e);
-    	oTooltip.hide();
-    }
+	if (tData.allowedStates.includes(newLocation.id)){
+		oTooltip.follow(e);
+		dt.dropEffect = 'move';
+		oTooltip.show();
+		oTooltip.setContent(newLocation.id);
+		e.currentTarget.classList.add("proposedCol");
+	} else {
+		dt.dropEffect = 'none';
+		oTooltip.follow(e);
+		oTooltip.hide();
+	}
 }
 
 function dragleave_handler(e) {
 	e.currentTarget.classList.remove("proposedCol");
+	oTooltip.hide();
 }
 
 function drop_handler(e) {
-	e.preventDefault();
 	e.currentTarget.classList.remove("proposedCol");
 	//Move the Card
 	var newLocation = getParentTD(e.target);
@@ -420,11 +423,16 @@ function drop_handler(e) {
 		var cardObj = new Object;
 		cardObj.card = card;
 		cardObj.originalLocation = card.parentNode;
-		pendingCardInfo.push(cardObj);
-		newLocation.appendChild(card);
-		resize();
-		card.classList.add("dropped");
-		actionWorkItem(tData.id, newLocation.id);
+		if (isCardPending(tData.id)){
+            alert("Woops! You're too fast for me.\nStill saving the last state change.");
+        } else {
+        	e.preventDefault();
+			pendingCardInfo.push(cardObj);
+			newLocation.appendChild(card);
+			resize();
+			card.classList.add("dropped");
+			actionWorkItem(tData.id, newLocation.id);
+        }
     }
     dragend_handler(e);
 }
@@ -544,6 +552,7 @@ function changeState(WIId, stateId, stateName, actionId, resolutionId, ETag){
 		async:true,	xhrFields: {withCredentials: true},	url: URL,
 		type: 'PUT',
 		data: str,
+		timeout:5000,
 		headers:{
 		'Content-Type' : 'application/json',
 		'Accept':'application/json',
@@ -553,19 +562,25 @@ function changeState(WIId, stateId, stateName, actionId, resolutionId, ETag){
             displaySaveSuccessful(WIId, response['rtc_cm:state']['rdf:resource']);
 		},
 		error: function(error){
-			var message = "Woops! Saving work item " + WIId + " failed.\n";
-			if (error.responseJSON['oslc_cm:message']!=null){
-				var errorString = error.responseJSON['oslc_cm:message'] + "\n";
-				if (errorString.indexOf('CRJAZ')>-1){
-					errorString = errorString.substr(errorString.indexOf(" ") + 1);
+			if (error.statusText=="timeout"){
+                var message = "Woops! Saving work item " + WIId + " timed out.\nYour session has expired.\nPlease refresh the page to login again.";
+			} else {
+				var message = "Woops! Saving work item " + WIId + " failed.\n";
+			}
+			if (error.responseJSON!=null){
+				if (error.responseJSON['oslc_cm:message']!=null){
+					var errorString = error.responseJSON['oslc_cm:message'] + "\n";
+					if (errorString.indexOf('CRJAZ')>-1){
+						errorString = errorString.substr(errorString.indexOf(" ") + 1);
+					}
+					if (errorString.indexOf('(work item')>-1){
+						errorString = errorString.substr(0, errorString.indexOf(' (work item')) + ".\n";
+					}
+					errorString = errorString.replace("'Save Work Item' failed. Preconditions have not been met: ", "");
+					errorString = errorString.replace("needs to be set", "is required in the '" + stateName + "' state");
+					//errorString = errorString.replace("'Save Work Item' failed. ", "");
+					message += errorString;
 				}
-				if (errorString.indexOf('(work item')>-1){
-					errorString = errorString.substr(0, errorString.indexOf(' (work item')) + ".\n";
-				}
-				errorString = errorString.replace("'Save Work Item' failed. Preconditions have not been met: ", "");
-				errorString = errorString.replace("needs to be set", "is required in the '" + stateName + "' state");
-				//errorString = errorString.replace("'Save Work Item' failed. ", "");
-				message += errorString;
 			}
 			alert(message + "\nMoving back to the '" + prevCol.id + "' state.");
 			prevCol.appendChild(card);
@@ -646,7 +661,7 @@ function getWorkingWI(WIId, OSLCproperties){
 	var URL = RTCURL() + "resource/itemName/com.ibm.team.workitem.WorkItem/" + WIId + oProps;
     var response = $.ajax({
         xhrFields: {withCredentials: true},
-        url: URL, type: 'GET', async:false,
+        url: URL, type: 'GET', async:false, timeout:5000,
         headers:{'Accept' : 'application/json'},
         error: function(error){
             alert('Your session has expired.\nPlease refresh this page to login.');
@@ -671,7 +686,14 @@ function setupkbCards(){
     }
 	
 }
-
+function isCardPending(WIId){
+	for (var cardInfo of pendingCardInfo){
+		if (cardInfo.card.id==WIId){
+            return true;
+		}
+	}
+	return false;
+}
 function removePendingCardInfoById(WIId){
 	var index = -1;
 	var removeIndex = false;
@@ -681,5 +703,5 @@ function removePendingCardInfoById(WIId){
             removeIndex = index;
 		}
 	}
-	if (index) pendingCardInfo.splice(index, 1);
+	if (index>-1) pendingCardInfo.splice(index, 1);
 }
