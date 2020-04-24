@@ -1,5 +1,6 @@
 var RTCWidget = false;
-var userName = '';
+var myUserName = '';
+var currentContributor;
 var runningThreads = 0;
 
 function resized(){
@@ -23,8 +24,7 @@ function showOptions(){
     document.getElementById('loadingDiv').style.display = "";
     document.getElementById('reportContentDiv').style.display = "none";
     document.getElementById('settingsDiv').style.display = "none";
-    url = applicationURL() + "service/com.ibm.team.repository.service.internal.webuiInitializer.IWebUIInitializerRestService/initializationData";
-    getREST(url, initialization, true);
+    doInit();
     var url = applicationURL() + "rpt/repository/foundation?fields=projectArea/projectArea[archived=false]/(name|itemId)";
     getREST(url, setupProjectDD);
     
@@ -39,8 +39,17 @@ function enableSave() {
     document.getElementById('btnSaveSettings').disabled=false;
 }
 
+function doInit(){
+    url = applicationURL() + "service/com.ibm.team.repository.service.internal.webuiInitializer.IWebUIInitializerRestService/initializationData";
+    getREST(url, initialization, true);
+}
 function initialization(initData){
-    userName = initData['soapenv:Body'].response.returnValue.value['com.ibm.team.dashboard.service.dashboardInitializationData'].currentContributor.name;
+    var dbI = initData['soapenv:Body'].response.returnValue.value['com.ibm.team.dashboard.service.dashboardInitializationData']
+    myUserName = dbI.currentContributor.name;
+    currentContributor = new Object();
+    currentContributor.url = dbI.currentContributorUri;
+    currentContributor.userId = dbI.currentContributor.userId;
+    currentContributor.itemId = dbI.currentContributor.itemId;
 }
 
 function setupProjectDD(projectAreas){
@@ -76,6 +85,74 @@ function setupProjectDD(projectAreas){
     }
 }
 
+function getTimeLabel(timestamp){
+    var date = Date.parse(timestamp);
+    var ts = new Object();
+    var timeNow = Date.now();
+    var t = timeNow - date;
+    t = t/1000; //convert to seconds
+    ts.prettyDate = formattedDate(date);
+    ts.title = " title='" + ts.prettyDate + "'";
+
+    var val;
+    var unit;
+    switch (true) {
+        case (t < 60):
+            unit = "second";
+            val = Math.round(t);
+            break;
+        case (t < 3600):
+            unit = "minute";
+            val = Math.round(t/60);
+            break;
+        case (t < 86400):
+           unit = "hour";
+           val = Math.round(t/3600);
+           break;
+        case (t < 604800):
+           unit = "day";
+           val = Math.round(t/86400);
+           break;
+        case (t < 2678400):
+           unit = "week";
+           val = Math.round(t/604800);
+           break;
+        case (t < 31557600):
+           unit = "month";
+           val = Math.round(t/2678400);
+           break;
+        default:
+            unit = "year";
+            val = Math.round(t/31557600);
+    }
+    if (val < 2){
+        ts.timeAgo = val + " " + unit + " ago";
+    } else {
+        ts.timeAgo = val + " " + unit + "s ago";
+    }
+    return ts;
+}
+
+function formattedDate(unix_timestamp){
+    var a = new Date(unix_timestamp);
+    var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var year = a.getFullYear();
+    var month = months[a.getMonth()];
+    var date = a.getDate();
+    var hour = a.getHours();
+    var min = a.getMinutes();
+    var sec = a.getSeconds();
+    var AMPM = ' AM';
+    if (hour < 1){
+        hour=12;
+    } else if (hour>11){
+        AMPM = ' PM';
+        if (hour>12){
+            hour = hour-12;
+        }
+    }
+    return date + ' ' + month + ' ' + year + ' at ' + hour + ':' + min + ':' + sec + AMPM ;
+}
 function selectProject(){
     var ProjDD = document.getElementById('ddprojectArea');
     var PAitemId = ProjDD.value;
@@ -253,7 +330,7 @@ function setupQueryDD(QueryJSON){
     for (var folder of queryFolders){
         if (folder.queries!=null){
             if (folder.queries.length>0){
-                if (userName==folder.scopeName){
+                if (myUserName==folder.scopeName){
                     folder.scopeName = "My Queries";
                     orderedFolders.unshift(folder);
                 } else {
@@ -520,6 +597,51 @@ function parseOSLCNodes(element){
         }
         return returnObj;
     }
+}
+
+function getWorkingWI(WIId, OSLCproperties, returnFunction){
+	//This function runs synchronously and returns the ETag if no return function is provided.
+	var isAsync = true;
+	var prettyParse = true;
+	if (returnFunction==null){
+		isAsync = false;
+    }
+	if (OSLCproperties=='noPrettyParse') {
+	   prettyParse = false;
+	   var oProps = "";
+	} else if (OSLCproperties!=''){
+        var oProps = "?oslc_cm.properties=" + OSLCproperties;
+	} else {
+		var oProps = "";
+	}
+	var URL = RTCURL() + "resource/itemName/com.ibm.team.workitem.WorkItem/" + WIId + oProps;
+    var response = $.ajax({
+        xhrFields: {withCredentials: true},
+        url: URL, type: 'GET', async:isAsync, timeout:5000,
+        headers:{'Accept' : 'application/json'},
+        success: function(response){
+        	if (isAsync){
+        	    if (prettyParse){
+                    returnFunction(parseOSLCNodes(response));
+                } else {
+                    returnFunction(response);
+                }
+        	}
+        },
+        error: function(error){
+            alert('Your session has expired.\nPlease refresh this page to login.');
+        }
+	});
+	if (!isAsync){
+        var returnObj = new Object();
+        if (prettyParse){
+            returnObj = parseOSLCNodes(response.responseJSON);
+        } else {
+            returnObj.json = response.responseJSON;
+        }
+        returnObj.ETag = response.getResponseHeader('ETag');
+        return returnObj;
+	}
 }
 
 function objParseChildNodes(element){

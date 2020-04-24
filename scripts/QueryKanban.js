@@ -11,11 +11,27 @@ var StateNames;
 var StateIdToName = new Object();
 var ResolutionIdToName;
 var pendingCardInfo = [];
+var UserPhoto = new Object();
+var userNumber = 0;
+var userEditingOrCreating = false;
+
+function userIsBack(){
+	if (userEditingOrCreating){
+		userEditingOrCreating = false;
+        reloadWIs();
+	}
+}
+
+function nowEditing(){
+    userEditingOrCreating = true;
+}
 
 function displayReport() {
+	initTA();
 	WIsRet = false;
 	TMsRet = false;
 	if (prefsSet()) {
+		doInit();
 		document.getElementById('settingsDiv').style.display = 'none';
 		document.getElementById('loadingDiv').style.display = "";
 		var prefs = new gadgets.Prefs();
@@ -26,7 +42,7 @@ function displayReport() {
         	Title = 'Kanban Board';
         }
 		document.getElementById('titleString').innerHTML = Title;
-		var propString = 'dc:identifier,dc:title,dc:type{rtc_cm:iconUrl},rtc_cm:ownedBy{dc:title,rtc_cm:photo},rtc_cm:state{dc:title,dc:identifier}'; //Get only these properties in the response...this is a big time saver...
+		var propString = 'dc:identifier,dc:title,dc:type{dc:title,rtc_cm:iconUrl},rtc_cm:ownedBy{dc:title,rtc_cm:photo},rtc_cm:state{dc:title,dc:identifier,rtc_cm:iconUrl}'; //Get only these properties in the response...this is a big time saver...
 		runStoredQuery(QueryId, WIReturn, propString, true); //This is synchronous
         ParentWFsFinal = false;
         WFs = '';
@@ -126,6 +142,13 @@ function showFailure(message) {
 }
 
 function WIReturn(workItems) {
+    WIs = workItems;
+    WIsObj = new Object();
+    for (var WI of WIs){
+    	WIsObj[WI.id] = WI;
+    }
+}
+function WIReload(workItems) {
     WIs = workItems;
     WIsObj = new Object();
     for (var WI of WIs){
@@ -282,19 +305,32 @@ function resize(){
 	gadgets.window.adjustHeight();
 }
 
+function getUserPhoto(user){
+	//user object must have a .title property, and a .photo.url property
+	var uName = user.title;
+    
+    if (UserPhoto[uName]==null){
+    	if (uName=='Unassigned'){
+    		UserPhoto[uName] = "images/unassigned.svg";
+    	} else if (user.photo.url!=undefined){
+            UserPhoto[uName] = user.photo.url;
+        } else {
+        	userNumber++;
+        	if (userNumber>8){
+        		userNumber = 1;
+        	}
+        	UserPhoto[uName] = "images/user" + userNumber + ".svg";
+        }
+    }
+    return UserPhoto[uName];
+}
+
 function WICard(WI){
     var uName = WI.ownedBy.title;
-    var uIcon = '';
-    if (uName != 'Unassigned'){
-    	uIcon = "<div class='photoDiv'><img class='userPhoto' src='"+ WI.ownedBy.photo.url + "'></div>";
-    } else {
-    	uName = '';
-    	uIcon = "<div class='photoDiv'><img class='userPhoto unassignedPhoto'></div>";
+    if (uName=='Unassigned'){
+    	uName='&nbsp';//clear 'Unassigned', let the icon speak for itself
     }
-    if (uName == ''){
-    	uName = '&nbsp';
-    }
-
+    var uIcon = "<div class='photoDiv'><img class='userPhoto' src='"+ getUserPhoto(WI.ownedBy) + "'></div>";
     var c = "";
     c += "<div id='" + WI.id + "' class='kbCard' draggable='true' ondragstart='dragstart_handler(event);' ondragend='dragend_handler(event);'>";
 	c += "<img class='kbCardIcon' src='" + WI.type.iconUrl + "'>";
@@ -302,6 +338,31 @@ function WICard(WI){
 	c += "<div class='padding'>" + WI.id + ": " + trimSummary(WI.title) + "</div>";
 	c += "</div>";
 	return c;
+}
+
+function reloadWIs(){
+	$("#kbTableBody").html("<tr><td style='font-size:22px;text-align:center;'>Refreshing...</td></tr>");
+
+    var prefs = new gadgets.Prefs();
+	var QueryId  =  prefs.getString("QueryId");
+	var propString = 'dc:identifier,dc:title,dc:type{dc:title,rtc_cm:iconUrl},rtc_cm:ownedBy{dc:title,rtc_cm:photo},rtc_cm:state{dc:title,dc:identifier,rtc_cm:iconUrl}'; //Get only these properties in the response...this is a big time saver...
+	runStoredQuery(QueryId, WIReload, propString, true); //This is synchronous
+
+	var colWidth = "width:" + 100/(StateNames.length) + "%";
+    var tBody = "<tr>";
+	for (var state of StateNames){
+        tBody +="<td id='" + state + "' class='Col' ondrop='drop_handler(event);' ondragover='dragover_handler(event);' ondragleave='dragleave_handler(event);' style='vertical-align:top;" + colWidth + "'>" ;
+        for (var WI of WIs){
+            if (WI.state.title == state){
+            	tBody += WICard(WI);
+            }
+        }
+         tBody += "</td>";
+    }
+    tBody += "</tr>";
+	$("#kbTableBody").html(tBody);
+	setupkbCards();
+	resize();
 }
 
 function trimSummary(s) {
@@ -445,11 +506,28 @@ function dragend_handler(e) {
 	}
 }
 
+function moveCard(WIId, stateName){
+	var card = document.getElementById(WIId);
+	var newLocation = document.getElementById(stateName);
+	var cardObj = new Object;
+	if (isCardPending(card.id)){
+            alert("Woops! You're too fast for me.\nStill saving the last state change.");
+	} else {
+		cardObj.card = card;
+		cardObj.originalLocation = card.parentNode;
+		pendingCardInfo.push(cardObj);
+		newLocation.appendChild(card);
+		resize();
+		card.classList.add("dropped");
+		actionWorkItem(card.id, newLocation.id);
+	}
+}
+
 function actionWorkItem(WIId, newStateName){
     var workingWI = getWorkingWI(WIId, 'rtc_cm:state');
 	var curWI = WIsObj[WIId];
     var kbCurStateId = curWI.state.id;
-    if (curWI.state.url == workingWI.json['rtc_cm:state']['rdf:resource']){
+    if (curWI.state.url == workingWI.state.url){
     	var WF = WFs[getWFidFromStateURL(curWI.state.url)];
 		for (var state of WF.state){
 			if (state.name==newStateName) var newStateId = state.id;
@@ -483,26 +561,223 @@ function actionWorkItem(WIId, newStateName){
         	changeState(WIId, newStateId, newStateName, actionId, null, workingWI.ETag);
         }
     } else {
-    	var actualStateId = getStateIdFromURL(workingWI.json['rtc_cm:state']['rdf:resource']);
+    	var actualStateId = getStateIdFromURL(workingWI.state.url);
     	var stateName = StateIdToName[actualStateId];
     	if (newStateName==stateName){
             alert("Yay! We all are in agreement.\nWork Item " + WIId + " was already moved to the '" + stateName + "' state.\nNo changes were needed.");
-            displaySaveSuccessful(WIId, workingWI.json['rtc_cm:state']['rdf:resource']);
+            displayStateSaveSuccessful(WIId, workingWI.state.url);
         } else {
             alert("Woops! Work Item " + WIId + " was moved by a different process to the '" + stateName + "' state.\nI'll display it there now. Only move it again if you should.");
-            moveCardToCol(WIId, workingWI.json['rtc_cm:state']['rdf:resource']);
+            moveCardToCol(WIId, workingWI.state.url);
         }
-    	
     }
 }
 
-function displaySaveSuccessful(WIId, newStateURL){
+function takeOwnership(WIId){
+    var workingWI = getWorkingWI(WIId, 'rtc_cm:ownedBy{*{*}}');
+    var currentOwnerName = workingWI.ownedBy.title;
+    var currentOwnerUrl = workingWI.ownedBy.url;
+    getUserPhoto(workingWI.ownedBy);//Ensure a photo exists for potential cards that were reassigned.
+
+    if (WIsObj[WIId].ownedBy.url == workingWI.ownedBy.url){//Owner was unchanged since last refresh, take ownership now.
+    	newJSON = new Object();
+		newJSON['rtc_cm:ownedBy'] = new Object();
+		newJSON['rtc_cm:ownedBy']['rdf:resource'] = currentContributor.url;
+		var props = 'rtc_cm:ownedBy';
+
+		var str = JSON.stringify(newJSON);
+		var URL = RTCURL() + "resource/itemName/com.ibm.team.workitem.WorkItem/" + WIId + "?oslc_cm.properties=rtc_cm:ownedBy";
+        
+		$.ajax({
+			async:true,	xhrFields: {withCredentials: true},	url: URL,
+			type: 'PUT',
+			data: str,
+			timeout:5000,
+			headers:{
+			'Content-Type' : 'application/json',
+			'Accept':'application/json',
+			'If-Match' : workingWI.ETag
+			},
+			success:function(response, status, xhr){
+				displayOwnerSaveSuccessful(WIId, myUserName, currentContributor.url);
+			},
+			error: function(error){
+				if (error.statusText=="timeout"){
+					var message = "Woops! Saving work item " + WIId + " timed out.\nYour session has expired.\nPlease refresh the page to login again.";
+				} else {
+					var message = "Woops! Saving work item " + WIId + " failed.\n";
+				}
+				if (error.responseJSON!=null){
+					if (error.responseJSON['oslc_cm:message']!=null){
+						var errorString = error.responseJSON['oslc_cm:message'] + "\n";
+						if (errorString.indexOf('CRJAZ')>-1){
+							errorString = errorString.substr(errorString.indexOf(" ") + 1);
+						}
+						if (errorString.indexOf('(work item')>-1){
+							errorString = errorString.substr(0, errorString.indexOf(' (work item')) + ".\n";
+						}
+						errorString = errorString.replace("'Save Work Item' failed. Preconditions have not been met: ", "");
+						errorString = errorString.replace("needs to be set", "is required in this state");
+						message += errorString;
+					}
+				}
+				alert(message);
+				displayOwnerSaveSuccessful(WIId, workingWI.ownedBy.title, workingWI.ownedBy.url);
+			}
+		});
+    } else { //WI has a new Owner. Update the card accordingly, and notify if the new owner isn't them.
+    	if (currentContributor.url!=workingWI.ownedBy.url){ 
+            alert("Woops! Work Item " + WIId + " was assigned to '" + currentOwnerName + "' just now.\nI'll update the card now. Please retry if you still want it.");
+        }
+        displayOwnerSaveSuccessful(WIId, currentOwnerName, currentOwnerUrl);
+    }
+}
+function hideNewCommentForm(){
+	document.getElementById('newCommentForm').style.display = 'none';
+}
+
+function saveComment(){
+    
+	var WIId = document.getElementById('comWIId').innerHTML;
+	var workingWI = getWorkingWI(WIId, 'rtc_cm:comments{*}');
+	var commentText = document.getElementById('newCommentInput').value;
+	if (commentText!=''){
+		hideNewCommentForm();
+		newJSON = new Object();
+		newJSON['dcterms:description'] = commentText;
+		
+		var str = JSON.stringify(newJSON);
+		var URL = RTCURL() + "oslc/workitems/" + WIId + "/rtc_cm:comments/oslc:comment";
+
+		$.ajax({
+			async:true,	xhrFields: {withCredentials: true},	url: URL,
+			type: 'POST',
+			data: str,
+			timeout:5000,
+			headers:{
+			'Content-Type' : 'application/json',
+			'Accept':'application/json',
+			'OSLC-Core-Version' : '2.0'
+			},
+			error: function(error){
+				if (error.statusText=="timeout"){
+					var message = "Woops! Saving work item " + WIId + " timed out.\nYour session has expired.\nPlease refresh the page to login again.";
+				} else {
+					var message = "Woops! Saving work item " + WIId + " failed.\n";
+				}
+				if (error.responseJSON!=null){
+					if (error.responseJSON['oslc_cm:message']!=null){
+						var errorString = error.responseJSON['oslc_cm:message'] + "\n";
+						if (errorString.indexOf('CRJAZ')>-1){
+							errorString = errorString.substr(errorString.indexOf(" ") + 1);
+						}
+						if (errorString.indexOf('(work item')>-1){
+							errorString = errorString.substr(0, errorString.indexOf(' (work item')) + ".\n";
+						}
+						errorString = errorString.replace("'Save Work Item' failed. Preconditions have not been met: ", "");
+						errorString = errorString.replace("needs to be set", "is required in this state");
+						message += errorString;
+					}
+				}
+				alert(message);
+			}
+		});
+	}
+}
+
+function createWICopy(WIId){
+	var prefs = new gadgets.Prefs();
+	var ProjectId = prefs.getString("ProjectId");
+	var workingWI = getWorkingWI(WIId, 'noPrettyParse').json;
+	
+    var WITypeId = getStateIdFromURL(workingWI['dc:type']['rdf:resource']);
+	var WI = workingWI;
+	delete WI['dc:identifier'];
+	delete WI["dc:created"];
+	delete WI["dc:creator"];
+	delete WI['rtc_cm:comments'];
+    delete WI["rtc_cm:contextId"];
+    delete WI["rtc_cm:modifiedBy"];
+    delete WI["rtc_cm:projectArea"];
+    delete WI["rtc_cm:resolution"];
+    delete WI["rtc_cm:resolved"];
+    delete WI["rtc_cm:resolvedBy"];
+    delete WI["rtc_cm:startDate"];
+    delete WI["rtc_cm:state"];
+    delete WI["rtc_cm:teamArea"];
+    delete WI["rtc_cm:timeSheet"];
+    delete WI["rtc_cm:timeSpent"];
+
+    var simpleWI = new Object();
+    simpleWI['dc:title'] = "YAY";
+    simpleWI['dc:type'] = WI['dc:type'];
+
+	var str = JSON.stringify(simpleWI);
+	var URL = RTCURL() + "oslc/contexts/" + ProjectId + "/drafts/workitems";
+    
+    $.ajax({
+		async:true, xhrFields: {withCredentials: true},	url: URL,
+		type: 'POST',
+		data: str,
+		timeout:5000,
+		headers:{
+		'Content-Type' : 'application/json',
+		'Accept':'application/json'
+		},
+		success: function(response, status, xhr){
+			var location = xhr.getResponseHeader("location");
+			window.open(location, "_blank");
+		},
+		error: function(error){
+			if (error.statusText=="timeout"){
+				var message = "Woops! Creating new work item timed out.\nYour session has expired.\nPlease refresh the page to login again.";
+			} else {
+				var message = "Woops! Creating new work item failed.\n";
+			}
+			if (error.responseJSON!=null){
+				if (error.responseJSON['oslc_cm:message']!=null){
+					var errorString = error.responseJSON['oslc_cm:message'] + "\n";
+					if (errorString.indexOf('CRJAZ')>-1){
+						errorString = errorString.substr(errorString.indexOf(" ") + 1);
+					}
+					if (errorString.indexOf('(work item')>-1){
+						errorString = errorString.substr(0, errorString.indexOf(' (work item')) + ".\n";
+					}
+					errorString = errorString.replace("'Save Work Item' failed. Preconditions have not been met: ", "");
+					errorString = errorString.replace("needs to be set", "is required in this state");
+					message += errorString;
+				}
+			}
+			alert(message);
+		}
+    });
+}
+
+function displayStateSaveSuccessful(WIId, newStateURL){
     var stateId = getStateIdFromURL(newStateURL);
 	WIsObj[WIId].state.id = stateId;
 	WIsObj[WIId].state.url = newStateURL;
 	WIsObj[WIId].state.name = StateIdToName[stateId];
+    cardSaved(WIId);
+}
 
+function displayOwnerSaveSuccessful(WIId, ownerName, ownerUrl){
     var card = document.getElementById(WIId);
+	for (var n of card.getElementsByClassName('namePad')){
+		n.innerHTML = ownerName;
+	}
+	for (var n of card.getElementsByClassName('photoDiv')){
+		for (var p of n.getElementsByTagName('img')){
+			p.src = UserPhoto[ownerName];
+		}
+	}
+    WIsObj[WIId].ownedBy.title = ownerName;
+    WIsObj[WIId].ownedBy.url = ownerUrl;
+    cardSaved(WIId);
+}
+
+function cardSaved(WIId){
+	var card = document.getElementById(WIId);
 	setTimeout(function () {
 		card.classList.remove('dropped');
 	}, 5100);
@@ -559,7 +834,7 @@ function changeState(WIId, stateId, stateName, actionId, resolutionId, ETag){
 		'If-Match' : ETag
 		},
 		success:function(response, status, xhr){
-            displaySaveSuccessful(WIId, response['rtc_cm:state']['rdf:resource']);
+            displayStateSaveSuccessful(WIId, response['rtc_cm:state']['rdf:resource']);
 		},
 		error: function(error){
 			if (error.statusText=="timeout"){
@@ -628,6 +903,13 @@ function needResolution(WIId, stateId, stateName, actionId, actionName, resoluti
     }
 }
 
+function showNewCommentForm(WIId){
+	document.getElementById('comWIId').innerHTML = WIId;
+	document.getElementById('newCommentForm').style.display = 'block';
+	document.getElementById('newCommentInput').focus();
+}
+
+
 function saveResolution(){
 	var WIId = document.getElementById('resWIId').innerHTML;
 	var stateId = document.getElementById('resStateId').innerHTML;
@@ -649,42 +931,24 @@ function saveResolution(){
 function cancelSaveResolution(){
     document.getElementById('resolutionForm').style.display = 'none';
     var WIId = document.getElementById('resWIId').innerHTML;
-
-}
-
-function getWorkingWI(WIId, OSLCproperties){
-	if (OSLCproperties!=''){
-        var oProps = "?oslc_cm.properties=" + OSLCproperties;
-	} else {
-		var oProps = "";
-	}
-	var URL = RTCURL() + "resource/itemName/com.ibm.team.workitem.WorkItem/" + WIId + oProps;
-    var response = $.ajax({
-        xhrFields: {withCredentials: true},
-        url: URL, type: 'GET', async:false, timeout:5000,
-        headers:{'Accept' : 'application/json'},
-        error: function(error){
-            alert('Your session has expired.\nPlease refresh this page to login.');
-        }
-	});
-	var returnObj = new Object();
-	returnObj.json = response.responseJSON;
-	returnObj.ETag = response.getResponseHeader('ETag');
-	return returnObj;
+    var card = document.getElementById(WIId);
+    var prevCol = document.getElementById(WIsObj[WIId].state.title);
+    prevCol.appendChild(card);
+	resize();
+	setTimeout(function () {
+		card.classList.remove('dropped');
+	}, 5100);
+	removePendingCardInfoById(WIId);
 }
 
 function setupkbCards(){
 	cards = document.getElementsByClassName('kbCard');
     for (var card of cards){
-    	card.addEventListener('contextmenu', e => {
+    	card.addEventListener('click', e => {
 		  e.preventDefault();
-		});
-		card.addEventListener('dblclick', function (e) {
-			var myCard = getParentCard(e.target);
-		    window.open(WIsObj[myCard.id].url,'_blank');
+		  cardMenu.show(e);
 		});
     }
-	
 }
 function isCardPending(WIId){
 	for (var cardInfo of pendingCardInfo){
@@ -704,4 +968,22 @@ function removePendingCardInfoById(WIId){
 		}
 	}
 	if (index>-1) pendingCardInfo.splice(index, 1);
+}
+
+function initTA() {
+	var text = document.getElementById('newCommentInput');
+	function resize () {
+		text.style.height = 'auto';
+		text.style.height = text.scrollHeight + 5 +'px';
+	}
+	/* 0-timeout to get the already changed text */
+	function delayedResize () {
+		window.setTimeout(resize, 0);
+	}
+
+	text.addEventListener('change',  resize);
+	text.addEventListener('cut',     delayedResize);
+	text.addEventListener('paste',   delayedResize);
+	text.addEventListener('drop',    delayedResize);
+	text.addEventListener('keydown', delayedResize);
 }
