@@ -23,7 +23,7 @@ var cardMenu = new(function () {
             m += "<div onclick='takeOwnership(" + card.id + ");cardMenu.closeMenu(event);' class='menuButton'>Take Ownership</div>";
         }
         oC = "createWICopy(" + card.id + ");cardMenu.closeMenu(event);";
-        //m += "<div onclick='" + oC + "' class='menuButton'>Copy</div>";
+        m += "<div onclick='" + oC + "' class='menuButton'>Copy</div>";
         oC = "showNewCommentForm(" + card.id + ");cardMenu.closeMenu(event);"; 
         m += "<div onclick='" + oC + "' class='menuButton'>Add Comment</div>";
 

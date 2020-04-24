@@ -14,6 +14,7 @@ var pendingCardInfo = [];
 var UserPhoto = new Object();
 var userNumber = 0;
 var userEditingOrCreating = false;
+var projectName;
 
 function userIsBack(){
 	if (userEditingOrCreating){
@@ -49,12 +50,13 @@ function displayReport() {
         rSent = 1;
         rReceived = 0;
         //The path of execution is to get the Process XML for the current project to get workflow information. This also checks if there is any Parent Process XML that should 'trump'. Global: WFs is populated correctly, and then ShowReport() is called.
-		getREST(RTCURL() + "rpt/repository/generic?fields=generic/com.ibm.team.process.ProjectArea[itemId=" + ProjectId + "]/(internalProcessProvider/itemId|processData[key='com.ibm.team.internal.process.compiled.xml']/value/contentId)", ProcessIdReturn);
+		getREST(RTCURL() + "rpt/repository/generic?fields=generic/com.ibm.team.process.ProjectArea[itemId=" + ProjectId + "]/(name|internalProcessProvider/itemId|processData[key='com.ibm.team.internal.process.compiled.xml']/value/contentId)", ProcessIdReturn);
 	}
 	oTooltip.init();
 }
 
 function ProcessIdReturn(r){
+	projectName = r[0].name;
     if (r[0].internalProcessProvider.itemId!=null){
     	rSent++;
     	var ParentProjectId = r[0].internalProcessProvider.itemId;
@@ -692,27 +694,23 @@ function createWICopy(WIId){
 	
     var WITypeId = getStateIdFromURL(workingWI['dc:type']['rdf:resource']);
 	var WI = workingWI;
-	delete WI['dc:identifier'];
-	delete WI["dc:created"];
-	delete WI["dc:creator"];
-	delete WI['rtc_cm:comments'];
-    delete WI["rtc_cm:contextId"];
-    delete WI["rtc_cm:modifiedBy"];
-    delete WI["rtc_cm:projectArea"];
-    delete WI["rtc_cm:resolution"];
-    delete WI["rtc_cm:resolved"];
-    delete WI["rtc_cm:resolvedBy"];
-    delete WI["rtc_cm:startDate"];
-    delete WI["rtc_cm:state"];
-    delete WI["rtc_cm:teamArea"];
-    delete WI["rtc_cm:timeSheet"];
-    delete WI["rtc_cm:timeSpent"];
+	var newWI = new Object();
+	newWI["dc:description"] = WI["dc:description"];
+	newWI["dc:subject"] = WI["dc:subject"];
+	newWI["dc:title"] = WI["dc:title"];
+	newWI["dc:type"] = WI["dc:type"];
+	newWI["oslc_cm:priority"] = WI["oslc_cm:priority"];
+	newWI["oslc_cm:severity"] = WI["oslc_cm:severity"];
+	newWI["rtc_cm:correctedEstimate"] = WI["rtc_cm:correctedEstimate"];
+	newWI["rtc_cm:due"] = WI["rtc_cm:due"];
+	newWI["rtc_cm:estimate"] = WI["rtc_cm:estimate"];
+	newWI["rtc_cm:filedAgainst"] = WI["rtc_cm:filedAgainst"];
+	newWI["rtc_cm:foundIn"] = WI["rtc_cm:foundIn"];
+	newWI["rtc_cm:ownedBy"] = WI["rtc_cm:ownedBy"];
+	newWI["rtc_cm:plannedFor"] = WI["rtc_cm:plannedFor"];
+	newWI["rtc_cm:subscribers"] = WI["rtc_cm:subscribers"];
 
-    var simpleWI = new Object();
-    simpleWI['dc:title'] = "YAY";
-    simpleWI['dc:type'] = WI['dc:type'];
-
-	var str = JSON.stringify(simpleWI);
+	var str = JSON.stringify(newWI);
 	var URL = RTCURL() + "oslc/contexts/" + ProjectId + "/drafts/workitems";
     
     $.ajax({
@@ -725,8 +723,10 @@ function createWICopy(WIId){
 		'Accept':'application/json'
 		},
 		success: function(response, status, xhr){
-			var location = xhr.getResponseHeader("location");
-			window.open(location, "_blank");
+			let location = xhr.getResponseHeader("location");
+			let draftId = location.substr(location.indexOf('draftId='));
+			let url = RTCURL() + "web/projects/" + projectName + "?" + draftId + "#action=com.ibm.team.workitem.newWorkItem&" + draftId + "&type=" + WITypeId;
+			window.open(url, "_blank");
 		},
 		error: function(error){
 			if (error.statusText=="timeout"){
