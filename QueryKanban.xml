@@ -20,6 +20,7 @@
 					<script src="scripts/jquery-3.3.1.js"></script>
 					<script src="scripts/common.js"></script>
 					<script src="scripts/puptip.js"></script>
+					<script src="scripts/kbCardMenu.js"></script>
 					<script src="scripts/QueryKanban.js"></script>
 					<script>
 						function initialize(){
@@ -46,7 +47,7 @@
 						}
 					</style>
 				</head>
-				<body onload="initialize()" onresize="resized()" style='font-family:Megrim !important;'>
+				<body onload="initialize()" onfocus="userIsBack()" onresize="resized()">
 					<div id='settingsDiv' style='display:none;width:100%;'>
 						<div style='font-size:14pt;margin-top:0px;margin-bottom:4px;'>Settings</div>
 						<div style='padding:5px;'>
@@ -120,6 +121,20 @@
 						<div>
 							<div id='titleString' style='float:left;font-size:14pt;padding-bottom:5px;padding-right:5px;'>
 							</div>
+							<div style="float:left;display:none;">
+								<svg height="16px" onclick="newWorkItem()" class="svgButton" viewBox="0 0 650 91" xmlns="http://www.w3.org/2000/svg">
+									<title>Opens a draft work item with properties set to match the majority of displayed work items.</title>
+									<text x="110" y="75" style="font-size:75px;">New Work Item</text>
+									<g>
+										<g>
+											<path fill="#6EC4A7" d="M24.018,49.415L42.149,67.54l38.119-38.122L62.145,11.292L24.018,49.415z M66.444,25.118 c1.259,1.262,1.259,3.306,0,4.566L44.369,51.753c-0.629,0.633-1.455,0.946-2.278,0.946c-0.831,0-1.655-0.313-2.284-0.946 c-1.261-1.262-1.261-3.305,0-4.565l22.072-22.07C63.138,23.857,65.183,23.857,66.444,25.118z"></path>
+											<polygon fill="#65B794" points="15.72,75.578 35.863,70.393 21.111,55.641"></polygon>
+											<path fill="#65B794" d="M87.621,12.533l-8.593-8.596c-2.548-2.546-6.992-2.543-9.53,0L66.706,6.73l18.129,18.124l2.786-2.788 C90.244,19.436,90.244,15.159,87.621,12.533z"></path>
+										</g>
+										<path fill="#647F94" d="M79.585,89.554H3.461c-1.833,0-3.318-1.486-3.318-3.319V5.512c0-1.833,1.484-3.318,3.318-3.318h51.113 c1.835,0,3.317,1.485,3.317,3.318c0,1.832-1.482,3.318-3.317,3.318H6.779v74.086h72.806c2.592,0,4.701-2.108,4.701-4.701V36.588 c0-1.833,1.484-3.318,3.317-3.318c1.832,0,3.318,1.485,3.318,3.318v41.627C90.922,84.467,85.836,89.554,79.585,89.554z"></path>
+									</g>
+								</svg>
+							</div>
 							<div style='float:left;margin-right:5px;' onmouseover='oTooltip.append(event, "<div style=\"font-size:13pt;color:red;\">-WARNING-</div><div>Moved items are saved immediately.</div><div style=\"font-size:9pt;color:grey;\">Do NOT fall asleep in here.</div>");' onmousemove='oTooltip.follow(event);' onmouseout='oTooltip.remove();'>
 								<svg version="1.1" viewBox="0 -3 16 20" width="16px" xmlns="http://www.w3.org/2000/svg">
 									<g fill="none" fill-rule="evenodd">
@@ -127,6 +142,11 @@
 											<path d="M8,1 L16,15 L0,15 Z M7,11 L7,13 L9,13 L9,11 Z M7,5 L7,10 L9,10 L9,5 Z M7,5"/>
 										</g>
 									</g>
+								</svg>
+							</div>
+							<div style='float:left;'>
+								<svg onclick='reloadWIs()' width='16' class='svgButton' viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg">
+									<path d="M25.032,26.16c2.884-2.883,4.184-6.74,3.928-10.51c-1.511,0.013-3.021,0.021-4.531,0.034 c0.254,2.599-0.603,5.287-2.594,7.277c-3.535,3.533-9.263,3.533-12.796,0c-3.534-3.533-3.534-9.26,0-12.794 c3.015-3.016,7.625-3.446,11.109-1.314c-1.181,1.167-2.57,2.549-2.57,2.549c-1,1.062,0.016,1.766,0.69,1.77h8.828 c0.338,0,0.611-0.274,0.612-0.612V3.804c0.041-0.825-0.865-1.591-1.756-0.7c0,0-1.495,1.48-2.533,2.509 C18.112,1.736,10.634,2.175,5.841,6.967c-5.3,5.3-5.3,13.892,0,19.193C11.141,31.459,19.733,31.459,25.032,26.16z"/>
 								</svg>
 							</div>
 							<div style='float:left;'>
@@ -166,6 +186,20 @@
 								&nbsp
 								<button onclick="cancelSaveResolution()" style="float:right;margin-top:10px;margin-bottom:10px;padding-bottom:3px;">Cancel</button>
 								<button onclick="saveResolution()" style="float:right;margin-top:10px;margin-bottom:10px;padding-bottom:3px;">Save</button>
+							</div>
+						</div>
+					</div>
+					<div id="newCommentForm" class="modal">
+						<div class="modal-content" style='width:600px;'>
+							<div id='newCommentFormTitle'>New Comment:</div>
+							<div style='display:none;'>
+								<a id='comWIId'></a>
+							</div>
+							<textarea id='newCommentInput' style='padding:2px 10px;width:100%;font-size:12pt;resize:none;overflow:hidden;'></textarea>
+							<div>
+								&nbsp
+								<button onclick="hideNewCommentForm()" style="float:right;margin-top:10px;margin-bottom:10px;padding-bottom:3px;">Cancel</button>
+								<button onclick="saveComment()" style="float:right;margin-top:10px;margin-bottom:10px;padding-bottom:3px;">Save</button>
 							</div>
 						</div>
 					</div>
