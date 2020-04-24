@@ -41,7 +41,7 @@ td{
     padding: 2px 5px;
 }
 .namePad{
-    padding-top: 9px;
+    padding-top: 8px;
     padding-left: 2px;
     padding-right: 20px;
     text-overflow: clip;
@@ -68,18 +68,13 @@ td{
     -webkit-user-select: none;
     -ms-user-select: none;
 }
-.unassignedPhoto{
-    width: 28px;
-    height: 28px;
-    background-image: url("data:image/svg+xml;utf8,<svg version='1.1' width='28' height='28' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 28 28'><circle fill='rgb(150,150,150)' cx='14' cy='14' r='14'></circle><path fill='white' d='M8.64 8.49C9.69 6.65 11.58 5.72 14.31 5.71C18.41 5.7 20.81 8.79 20.63 11.38C20.44 13.98 18.69 14.48 17.41 15.29C16.13 16.1 15.42 16.65 15.27 17.23C15.16 17.61 15.11 17.89 15.13 18.07L12.91 18.07C12.93 17.33 13.04 16.71 13.25 16.19C13.56 15.41 13.72 15.3 14.53 14.35C15.34 13.4 16.31 12.54 16.28 10.62C16.25 8.7 15.5 7.66 14.09 7.7C12.69 7.73 11.75 8.93 11.61 10.62C11.52 11.74 10.53 11.03 8.64Z'></path><circle fill='white' cx='14.25' cy='21.5' r='2'></circle></svg>");
-    background-position-x: 2px;
-    background-position-y: 2px;
-    background-repeat: no-repeat;
-}
 .kbCard:hover{
     box-shadow: inset 0px 0px 4px rgba(0,0,0,0.7);
 }
 .kbCard:active{
+    box-shadow: inset 0px 0px 4px rgba(0,0,0,1);
+}
+.kbCardMenuActive{
     box-shadow: inset 0px 0px 4px rgba(0,0,0,1);
 }
 .kbCardIcon{
@@ -167,4 +162,25 @@ td{
   padding: 24px;
   border: 1px solid #888;
   width: 300px; /* Could be more or less, depending on screen size */
+}
+.kbMenu {
+    text-align:center;
+    box-shadow: 0 0 12px rgba(0, 0, 0, 0.5);
+    position:absolute;
+    white-space:no-wrap;
+    background-color:rgb(255, 255, 255);
+    border: 1px solid rgb(128, 128, 128);
+    border-radius: 3px;
+}
+.menuSeparator{
+  background-color: #9eadbb;
+  color:white;
+  padding:0px 10px;
+}
+.menuButton{
+  padding:4px 10px;
+  cursor:pointer;
+}
+.menuButton:hover{
+  background:radial-gradient(rgba(0, 0, 50, 0.04), rgba(0,0,50,0.06));
 }
