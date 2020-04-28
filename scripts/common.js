@@ -548,14 +548,24 @@ function returnAllOSLCResults(url){
         'Accept' : 'application/json'
         },
         success:function(data){
+            var results = new Object();
+            if (typeof data['oslc_cm:results'] != 'undefined'){
+                results = data;
+            } else {
+                results['oslc_cm:results'] = data;
+            }
             if (data['oslc_cm:next']!=null){
                 var data2 = returnAllOSLCResults(data['oslc_cm:next']);
-                var test = '';
-                for (var item of data2['oslc_cm:results']){
-                    data['oslc_cm:results'].push(item);
+                if (typeof data2['oslc_cm:results'] != 'undefined'){
+                    results2 = data2;
+                } else {
+                    results2['oslc_cm:results'] = data2;
+                }
+                for (var item of results2['oslc_cm:results']){
+                    results['oslc_cm:results'].push(item);
                 }
             }
-            allData = data;
+            allData = results;
         },
         error: function(error){
             console.error(error);
