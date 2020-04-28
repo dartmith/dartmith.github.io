@@ -336,7 +336,7 @@ function WICard(WI){
     var c = "";
     c += "<div id='" + WI.id + "' class='kbCard' draggable='true' ondragstart='dragstart_handler(event);' ondragend='dragend_handler(event);'>";
 	c += "<img class='kbCardIcon' src='" + WI.type.iconUrl + "'>";
-	c += "<div class='namePlate'>" + uIcon + "<div class='namePad'>" + uName + "</div></div>";
+	c += "<div class='namePlate'>" + uIcon + "<div class='namePad'>" + prettyName(uName) + "</div></div>";
 	c += "<div class='padding'>" + WI.id + ": " + trimSummary(WI.title) + "</div>";
 	c += "</div>";
 	return c;
@@ -760,11 +760,20 @@ function displayStateSaveSuccessful(WIId, newStateURL){
 	WIsObj[WIId].state.name = StateIdToName[stateId];
     cardSaved(WIId);
 }
-
+function prettyName(longName){
+	var eRng = longName.indexOf(' ');
+	if (eRng>0){
+		var s = longName.substring(0,eRng);
+	    s = s.replace(",","");
+	} else {
+        s = longName;
+    }
+    return s;
+}
 function displayOwnerSaveSuccessful(WIId, ownerName, ownerUrl){
     var card = document.getElementById(WIId);
 	for (var n of card.getElementsByClassName('namePad')){
-		n.innerHTML = ownerName;
+		n.innerHTML = prettyName(ownerName);
 	}
 	for (var n of card.getElementsByClassName('photoDiv')){
 		for (var p of n.getElementsByTagName('img')){
