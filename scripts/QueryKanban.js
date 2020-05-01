@@ -332,10 +332,10 @@ function WICard(WI){
     if (uName=='Unassigned'){
     	uName='&nbsp';//clear 'Unassigned', let the icon speak for itself
     }
-    var uIcon = "<div class='photoDiv'><img class='userPhoto' src='"+ getUserPhoto(WI.ownedBy) + "'></div>";
+    var uIcon = "<div class='photoDiv'><img class='userPhoto' draggable='false' src='"+ getUserPhoto(WI.ownedBy) + "'></div>";
     var c = "";
     c += "<div id='" + WI.id + "' class='kbCard' draggable='true' ondragstart='dragstart_handler(event);' ondragend='dragend_handler(event);'>";
-	c += "<img class='kbCardIcon' src='" + WI.type.iconUrl + "'>";
+	c += "<img class='kbCardIcon' draggable='false' src='" + WI.type.iconUrl + "'>";
 	c += "<div class='namePlate'>" + uIcon + "<div class='namePad'>" + prettyName(uName) + "</div></div>";
 	c += "<div class='padding'>" + WI.id + ": " + trimSummary(WI.title) + "</div>";
 	c += "</div>";
