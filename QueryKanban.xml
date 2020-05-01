@@ -9,7 +9,6 @@
 	<UserPref datatype="hidden" name="Title"/>
 	<UserPref datatype="hidden" name="ProjectId"/>
 	<UserPref datatype="hidden" name="ProjectName"/>
-	<UserPref datatype="hidden" name="TeamId"/>
 	<UserPref datatype="hidden" name="QueryId"/>
 	<Content type="html">
 		<![CDATA[
@@ -59,10 +58,6 @@
 								<tr>
 									<td style='width:115px;'>Project Area:</td>
 									<td><select onchange='selectProject()' id='ddprojectArea' style='width:100%'></select></td>
-								</tr>
-								<tr id='teamAreaRow' style='display:none;'>
-									<td>Team Area:</td>
-									<td><select id='ddteamArea' style='width:100%'></select></td>
 								</tr>
 								<tr id='SelQueryRow' style='display:none;'>
 									<td>Query:</td>
@@ -221,9 +216,9 @@
 						</twistButton>
 						<div id='instructionsContent' class='hide' style='background-color:#fffeea;border-bottom-left-radius:20px;border-bottom-right-radius:20px;margin:0px 15px;padding:10px;'>
 							<div style='padding-bottom:10px;'>
-								<span style='font-weight:bold;'>This SWEG widget can't run!</span> The most common cause is a lack of 'trust' for the Domain's Root Signer Certificate.
+								<span style='font-weight:bold;'>This SWEG widget can't run!</span> Supported browsers include Firefox, Edge, and Chrome. Internet Explorer is not supported.<br><br>If you are using Firefox, a lack of trust is the most likely the cause of this message.
 							</div>
-							<div style='font-weight:bold;'>To trust the Root Signer Certificate:</div>
+							<div style='font-weight:bold;'>Establishing trust in Firefox:</div>
 								<ol>
 									<li>Open the <span style='font-weight:bold'>Firefox Options</span></li>
 									<li>Select "<span style='font-weight:bold'>Privacy and Security</span>"</li>
@@ -234,7 +229,7 @@
 									<li><span style='font-weight:bold;'>Enable all checkboxes</span></li>
 									<li>Click OK, OK, OK, OK!</li>
 									<li><span style='font-weight:bold;'>Refresh</span> this page and the widget should now load!</li>
-									<span style='color:grey;'><li>Optional: Remove any previously-made security exceptions so that the lock in the URL will be green (happy).</li></span>
+									<span style='color:grey;'><li>Optional: Remove any previously-made security exceptions (so that the lock in the address bar will be happy and green).</li></span>
 								</ol>
 								<div style='margin-top:-7px;text-align:center;font-size:7pt;color:rgb(207, 128, 70);'>
 									Still broken?<br>Call Dave at 777-2607
