@@ -118,14 +118,12 @@ function applySettings() {
     var ProjDD = document.getElementById('ddprojectArea');
     var selProj = ProjDD.value;
 	var PAName = ProjDD.options[ProjDD.selectedIndex].text;
-	var selTeam = document.getElementById('ddteamArea').value;
 	var QueryId = document.getElementById('selectedQueryId').textContent;
 	if (QueryId != '') {
 	    var prefs = new gadgets.Prefs();
 	    prefs.set("Title", Title);
 	    prefs.set("ProjectId", selProj);
 	    prefs.set("ProjectName", PAName);
-	    prefs.set("TeamId", selTeam);
 	    prefs.set("QueryId", QueryId);
 	    displayReport();
 	} else {
