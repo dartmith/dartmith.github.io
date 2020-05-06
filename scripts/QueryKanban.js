@@ -80,9 +80,13 @@ function ProcessXMLReturn(p){
 			if ((!ParentWFsFinal) || (WFs=='')){
                 WFs = new Object();
 			    var Workflows = cData.workflowDefinition;
-				for (var WF of Workflows){
-					WFs[WF.id] = WF.workflow;
-				}
+			    if (typeof Workflows[Symbol.iterator] === 'function'){
+                    for (var WF of Workflows){
+						WFs[WF.id] = WF.workflow;
+					}
+			    } else {
+					WFs[Workflows.id] = Workflows.workflow;
+			    }
 			}
 		}
 	}
