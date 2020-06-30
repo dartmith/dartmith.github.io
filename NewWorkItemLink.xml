@@ -1,18 +1,38 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <Module>
 	<ModulePrefs 
-		title="New Work Item"
-		height="30">
+		title="Quick Buttons"
+		height="34">
 		<Require feature="dynamic-height"/>
 		<Require feature="setprefs"/>
 	</ModulePrefs>
-	<UserPref datatype="string" name="lText" display_name="Hyperlink Text"/>
-	<UserPref datatype="string" name="WIId" display_name="Template Work Item Id"/>
+	<UserPref datatype="string" required="true" name="lText" display_name="Button(s) Text (comma separated)"/>
+	<UserPref datatype="string" required="true" name="WIId" display_name="Template Work Item Id(s)"/>
+	<UserPref datatype="bool" name="smallButtons" display_name="Small Buttons"/>
 	<Content type="html">
 		<![CDATA[
 			<html>
 				<head>
-					<link rel="stylesheet" href="css/widgets.css">
+					<style>
+						.button1 {
+							cursor:pointer;
+							display:inline-block;
+							padding:4px 8px;
+							border:1px solid #b6c2ce;
+							margin:2px;
+							border-radius:2.8px;
+							box-sizing: border-box;
+							font-family:'Roboto',sans-serif;
+							color:#000000;
+							text-align:center;
+							transition: all 0.15s;
+						}
+						.button1:hover {
+							border:1px solid #80b4d6;
+							color:#FFFFFF;
+							background-color:#80b4d6;
+						}
+					</style>
 					<script src="scripts/jquery-3.3.1.js"></script>
 					<script src="scripts/common.js"></script>
 					<script src="scripts/NewWorkItemLink.js"></script>
@@ -20,13 +40,27 @@
 						function initialize(){
 							var prefs = new gadgets.Prefs();
     						var lText = prefs.getString("lText");
+							var smallButtons = prefs.getBool("smallButtons");
 							var WIId = prefs.getString("WIId");
 							var iURL = prefs.getString("iURL");
 							if (lText!= ""){
-								var icon = '<svg style="float:left;" height="24px" viewBox="0 0 24 24"><path d="M22.5,14H14v8.5c0,0.276-0.224,0.5-0.5,0.5h-4C9.224,23,9,22.776,9,22.5V14H0.5 C0.224,14,0,13.776,0,13.5v-4C0,9.224,0.224,9,0.5,9H9V0.5C9,0.224,9.224,0,9.5,0h4C13.776,0,14,0.224,14,0.5V9h8.5 C22.776,9,23,9.224,23,9.5v4C23,13.776,22.776,14,22.5,14z"/></svg>';
-								document.getElementById('linkDiv').innerHTML = '<div class="svgButton" style="font-size:1.5em;" onclick="createWICopy()">' + icon + '<div style="margin-left:30px;margin-top:-2px;">' + lText + '</div></div>';
+								var texts = lText.split(",");
+								var IDs = WIId.split(",");
+								var h = '';
+								for (let i=0;i<texts.length;i++) {
+									h += genBtn(texts[i], IDs[i], smallButtons);
+								}
+								document.getElementById('linkDiv').innerHTML = h;
 							} else {
 								document.getElementById('linkDiv').innerHTML = "This widget needs to be set up. Use the menu to configure it.";
+							}
+							gadgets.window.adjustHeight();
+						}
+						function genBtn(Text, Id, smallButtons){
+							if (smallButtons){
+								return '<div class="button1" onclick="createWICopy(' + Id + ')">' + Text + '</div>';
+							} else {
+								return '<div style="display:block;" class="button1" onclick="createWICopy(' + Id + ')">' + Text + '</div>';
 							}
 						}
 					</script>
