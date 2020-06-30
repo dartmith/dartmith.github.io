@@ -1,8 +1,6 @@
 var WI;
 
-function createWICopy(){
-	var prefs = new gadgets.Prefs();
-    var WIId = prefs.getString("WIId");
+function createWICopy(WIId){
 	var workingWI = getWorkingWI(WIId, 'noPrettyParse').json;
 	WI = workingWI;
 	var url = RTCURL() + "rpt/repository/foundation?fields=foundation/projectArea[itemId=" + WI['rtc_cm:contextId'] + "]/(name)";
