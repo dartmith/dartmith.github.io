@@ -1,0 +1,105 @@
+/*
+ Licensed Materials - Property of IBM
+ mod-exp.css
+ � Copyright IBM Corporation 2014
+
+U.S. Government Users Restricted Rights:  Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp. 
+*/
+
+body {
+	font-family: "Arial";
+	font-size: 11px;
+  /* prevent IE from temporarily showing a scrollbar on resize */
+  overflow-y: hidden;
+}
+
+#explorer {
+  min-height: 155px;
+}
+
+#explorer .heading {
+	color: #000;
+}
+
+
+#explorer .heading .sectionNumber{
+  font-weight:bold;
+  color: #afafaf;
+}
+
+#explorer .row {
+    'border-left: 1px solid transparent;
+}
+
+#explorer .row.parent {
+	position: relative;
+}
+
+#explorer .parent .expander {
+   opacity: 0;
+   position: absolute;
+   top: 0px;
+   left: -3px;
+   height: 12px;
+   width: 12px;
+   background-image: url(open.png);
+   background-repeat: no-repeat;
+
+   /* Animated transition for expanders */
+   -webkit-transition-property: opacity;
+   -webkit-transition-duration: 0.5s;
+   -moz-transition-property: opacity;
+   -moz-transition-duration: 0.5s;
+   transition-property: opacity;
+   transition-duration: 0.5s;
+}
+
+#explorer:hover .parent .expander {
+    opacity: 1;
+}
+
+#explorer .parent .expander:hover {
+   background-image: url(open-hover.png);
+  
+}
+
+#explorer .parent.collapsed .expander {
+    background-image: url(collapsed.png);
+    left: -3px;
+}
+
+#explorer .parent.collapsed .expander:hover {
+   background-image: url(collapsed-hover.png);
+}
+
+
+#explorer {
+    padding-left: 2px;
+}
+
+#explorer.nowrap .item {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#explorer .item {
+	cursor: pointer;
+	display: block;
+  	border: 1px solid transparent;
+  	margin-left: 10px;
+  	padding: 0px 3px 0.5px 3px;
+}
+
+#explorer .item:hover {
+  color: #000000;
+  background-color: #deffeb;
+}
+
+.depth2, .depth3, .depth4, .depth5, .depth6, .depthGreaterThan6  {
+	margin-left: 5px;
+}
+
+.parent.collapsed .row {
+    display: none;
+}

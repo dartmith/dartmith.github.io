@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--
+ Licensed Materials - Property of IBM
+ moduleexplorer.xml
+© Copyright IBM Corporation 2013
+
+U.S. Government Users Restricted Rights:  Use, duplication or disclosure restricted by GSA ADP Schedule Contract with IBM Corp. 
+-->
+<Module specificationVersion="2.0">
+<ModulePrefs title="Navigator">
+	<Require feature="com.ibm.rdm.rm.api"></Require>
+	<Require feature="dynamic-height"/>
+</ModulePrefs>
+<Content type="html">
+<![CDATA[
+	<link rel="stylesheet" type="text/css" href="css/mod-exp.css"/>
+	<div id="explorer"></div>
+	<script src="https://code.jquery.com/jquery-1.9.1.js"></script>
+	<script src="js/mod-exp.js"></script>
+]]>
+</Content>
+</Module>
