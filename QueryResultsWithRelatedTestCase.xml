@@ -1,0 +1,162 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Module><ModulePrefs title="Current Stories" height=" 200"><Require feature="dynamicheight"/><
+Require feature="setprefs"/></ModulePrefs ><UserPref name="Projectid"
+datatype="hidden"/><UserPref name="ProjectName" datatype="hidden"/><UserPref
+name="Queryid" datatype="hidden"/><Content type=" html "><![CDATA[
+<html>
+<head>
+<link rel="stylesheet" href="css/pupTip.css">
+<script src="scripts/jquery-3.3.1.js"></script>
+<script src="scripts/common.js"></script>
+<script src="scripts/QueryResultsWithRelatedTestCase .j s"></script>
+<script src="scripts/puptip.js"></script>
+<style>
+.hide{
+display:none;
+}
+.svgButton {
+color:rgb(50,50,50);
+background-color:transparent;
+fill: rgb(190,190,190);
+cursor:pointer;
+padding:4px;
+}
+.svgButton:hover{
+color:rgb(0,0,0);
+background: radial-gradient(rgba(0,0,0,0.07), rgba(0,0,0,.07));
+fill: rgb(0,0,0);
+}
+.svgHollowButton {
+stroke: rgb(190,190,190);
+background-color:transparent;
+cursor:pointer;
+padding:4px;
+}
+.svgHollowButton:hover{
+background: radial -gradient(rgba(0,0,0,0.07), rgba(0,0,0,.07));
+stroke: rgb(0,0,0);
+}
+.svgleft {
+padding-right: 2px;
+float:left;
+}
+.svgindented{
+padding-left:30px;
+}
+.svgRoatated{
+transform:rotate(90deg);
+}
+.svgSelected {
+background: radial-gradient(rgba(0,200,0,0.25), rgba(0,255,0,0.25));
+}
+queryButton,twistie,twistButton{
+display:block;
+-webkit-touch-callout:none;
+-webkit-user-select: none;
+-khtml-user-select: none;
+- moz -user-select:none;
+-ms-user-select: none;
+user -select: none;
+}
+</style>
+</head>
+<body onload="displayReport()" onresize="resized()">
+
+<div id='settingsDiv' style='display:none;width:100%; '>
+<div style='font-size:14pt;margin-top:0px;margin-bottom:4px; '>Settings< /div>
+<div style='padding:5px; '>
+<table style='width:100%; '>
+<tr>
+<td style='width:115px; '>Project Area:</td>
+<td>
+<select onchange='selectProject()' id='ddprojectArea' style='width:100%'>
+</select>
+</td>
+</tr>
+<tr id='SelQueryRow' style='display:none;'>
+<td>Query:</td>
+<td style='padding-right:3px; '>
+<div id='selectedQueryid' style='display:none; '></div>
+<div style='padding:3px 5px;width:calc(100% - 10px);border:0.25px;borderstyle:
+solid;font-size:9pt;border-color:rgb(120,120,120); '>
+<span id='selectedQueryName'>
+Select a Query ...
+</span>
+<span style='float:right;' onclick='openQueryEditor()' title='Open Query'>
+<svg id='editQueryButton' class='svgHollowButton' style='display:none;paddingtop:
+1px;position:relative;top:-2px;right:-5px;' width='16' viewBox='0 0 24 24'
+xmlns='http://www.w3.org/2000/svg'>
+<polygon fill='none' points='16 3 21 8 8 21 3 21 3 16 16 3' stroke-linecap='round'
+stroke-linejoin='round' stroke-width='2'/>
+</svg>
+</span>
+</div>
+</div>
+</td>
+</tr>
+<tr id='QuerySelector' style='display:none; '>
+<td></td>
+<td style= 'padding-right:3px; '>
+<div id='querySelectionDiv' style='width:100%;border:0.25px;border-style:solid;fontsize:
+9pt;border-radius:5px;border-color:rgb (120,120,120); '>
+</div>
+</td>
+</tr>
+</table>
+<button onclick="closeSettings()" style="float:right;margin-top:10px;marginbottom:
+10px;padding-bottom:3px;">Close</button>
+<button onclick="applySettings()" id="btnSaveSettings" style="float:right;margintop:
+10px;margin-bottom:10px;padding-bottom:3px;" disabled>Apply</button>
+</div>
+</div>
+<div id='loadingDiv' style='height:100%;position:relative'>
+<div style='margin:0;position:absolute;top:50%;left:50%;margin-right:-
+50%;transform:translate(-50%,-50%);text-align:center; '>
+<div><svg width="32" height="32" viewBox="0 0 42 42" ><defs><linearGradient
+x1="8.042%" y1="0%" y2="100%" id="a"><stop stop-color="#000" stop-opacity="0"
+offset="0%"/><stop stop-color="#000" stop-opacity=".231" offset="63.146%"/><stop
+stop-color="#000" offset="100%"/></linearGradient></defs><g fill="none" fillrule="
+evenodd"><g transform="translate(1 1)"><path d="M36 20c0-9 . 94-8.06-20-20-20"
+stroke="url(#a)" stroke-width="6"><animateTransform attributeName="transform"
+type="rotate" from="0 20 20" to="360 20 20" dur="0.75s" repeatCount="indefinite"
+/></path></g></g></svg></div>
+<div style='color:grey; '>
+Loading
+</div>
+</div>
+</div>
+<div style='display:none;width:100%;' id='reportContentDiv'>
+<div>
+<div style='float:left;font-si2e:14pt;padding-bottom:5px;padding-right:5px; '>
+Related Test Cases
+</div>
+<div style='float:left; '>
+<svg onclick='showOptions()' width='12' class='svgButton' viewBox='0 0 60 74'
+xmlns='http://www.w3.org/2000/svg'>
+<path d="M57,32h-2.58c-1.374-3.881-5.067-6.667-9.419-
+6.667536.955,28.119,35.581,32H3c-1.657,0-3,1.343-3,3
+c0,1.656,1.343,3,3,3h32.371c1.168,4.224,5.031,7.334,9.629,7.334s8.461-3.107,9.629-
+7.334H57c1.657,0,3-1.344,3-3 (60,33.343,58.657,32,57,322"/>
+<path d="M57,58H24.419c-1.374-3.881-5.067-6.666-9.419-6.66656.955,54.119,5.581,58H3c-
+1.657,0-3,1.344-3,3 s1.343,3,3,3h2.371c1.168,4.227,5.031,7.334,9.629,7.334s8.461-
+3.107,9.629-7.334H57c1.657,0,3-1.344,3-3558.657,58,57,582"/>
+<path d="M3,13h2.371c1.168,4.227,5.031,7.333,9.629,7.333s8.467-3.107,9.629-
+7.333H57c1.657,0,3-1.343,3-3 s-1.343-3-3-
+3H24.419C23.045,3.119,19.352,0.333,15,0.33356.955,3.119,5.581,7H3c-1.657,0-3,1.343-
+3, 351. 343, 13, 3, 132"/>
+</svg>
+</div>
+</div>
+<div style='width:100%; '>
+<div style="width:100%;overflow-x:hidden;overflow-y:auto;">
+<table style='width:97%;font-size:9pt; '>
+<tbody id='reportTableBody'>
+</tbody>
+</table>
+</div>
+</div>
+</div>
+</body>
+</html>
+ll></Content></Module>
+

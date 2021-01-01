@@ -28,6 +28,7 @@ function CopyWI(projectData){
 
 	var str = JSON.stringify(newWI);
 	var URL = RTCURL() + "oslc/contexts/" + WI['rtc_cm:contextId'] + "/drafts/workitems";
+	URL = proxyURL(URL);
     
     $.ajax({
 		async:true, xhrFields: {withCredentials: true},	url: URL,

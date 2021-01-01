@@ -28,6 +28,7 @@ function nowEditing(){
 }
 
 function displayReport() {
+	RTCWidget = true;
 	initTA();
 	WIsRet = false;
 	TMsRet = false;
@@ -370,6 +371,9 @@ function reloadWIs(){
 }
 
 function trimSummary(s) {
+	s = s.replace(/\<br\>/g,"");
+	s = s.replace(/\<br\/\>/g,"");
+	s = s.replace(/\<div\>/g,"");
 	var len = 43;
 	var trimmed = s.length > len ? s.substring(0, len - 3) + "..." : s;
 	return trimmed;

@@ -27,8 +27,11 @@ function displayReport(){
             var url = applicationURL() + "rpt/repository/apt?fields=apt/iterationPlanRecord[itemId=" + PlanId + "]/(name|iteration/(startDate|endDate|itemId)|owner/itemId)";
             getREST(url, PlanReturn);
             //Get Categories for Project Area (The Team Area is selected by the plan, but all associated categories must be found)
-            url = applicationURL() + "rpt/repository/workitem?fields=workitem/category[projectArea/itemId=" + ProjectId + "]/(itemId|teamAreas/itemId)";
-            getREST(url, CategoriesReturn);
+            //url = applicationURL() + "rpt/repository/workitem?fields=workitem/category[projectArea/itemId=" + ProjectId + "]/(itemId|teamAreas/itemId)";
+			
+            //getREST(url, CategoriesReturn);
+			url = applicationURL() + 'oslc/categories.json?oslc_cm.query=rtc_cm:projectArea="' + ProjectId + '"';
+			getRESTJSON(url, CategoriesReturn, true);
             //Get All Team Areas for Project Area (This is needed so that all children teams to the plan's team may be used in the WI query)
             url = applicationURL() + "rpt/repository/foundation?fields=foundation/projectArea[itemId=" + ProjectId + "]/(allTeamAreas/(itemId|parentTeamArea/itemId))";
             getREST(url, AllTeamAreasReturn);
@@ -45,7 +48,7 @@ function PlanReturn(val){
 }
 
 function CategoriesReturn(val){
-    Categories = val;
+    Categories = val["oslc_cm:results"];
     CategoriesReturned=true;
     if (PlanReturned && AllTeamAreasReturned){
         RunQuery();
@@ -53,7 +56,19 @@ function CategoriesReturn(val){
 }
 
 function AllTeamAreasReturn(val){
-    AllTeamAreas = val[0].allTeamAreas;
+	if (val[0].allTeamAreas){
+		if (val[0].allTeamAreas[0]){
+			AllTeamAreas = val[0].allTeamAreas;
+		} else {
+			AllTeamAreas = [];
+			AllTeamAreas.push(val[0].allTeamAreas);
+		}
+	} else {
+		var newTA = new Object();
+		newTA.itemId = ProjectId;
+		AllTeamAreas = [];
+		AllTeamAreas.push(newTA);
+	}
     AllTeamAreasReturned=true;
     if (CategoriesReturned && PlanReturned){
         RunQuery();
@@ -79,19 +94,17 @@ function RunQuery(){
         }
     }
     for (var cat of Categories){
-        if (cat.teamAreas != null){
-            if (typeof cat.teamAreas[Symbol.iterator]==='function'){
-                for (var teamArea of cat.teamAreas) {
-                    if (teamIds.includes(teamArea.itemId)){
-                        cats.push(cat.itemId);
-                    }
-                }
-            } else {
-                if (teamIds.includes(cat.teamAreas.itemId)){
-                    cats.push(cat.itemId);
-                }
-            }
-        }
+		var catId = cat["rdf:resource"];
+		catId = catId.substr(catId.lastIndexOf("/") + 1);
+		var catTeam = ProjectId;
+        if (cat["rtc_cm:defaultTeamArea"] != null){
+			catTeam = cat["rtc_cm:defaultTeamArea"]["rdf:resource"];
+			catTeam = catTeam.substr(catTeam.lastIndexOf("/") + 1);
+		}
+		
+		if (teamIds.includes(catTeam)){
+			cats.push(catId);
+		}
     }
     var Filter = "target/itemId=" + targetId;
     if (cats.length>0){ //If no categorires were found, assume the project owns the plan.
@@ -105,8 +118,10 @@ function RunQuery(){
         Filter +=")";
     } else {
         for (var cat of Categories){
-            cats.push(cat.itemId);
-        }
+			var catId = cat["rdf:resource"];
+			catId = catId.substr(catId.lastIndexOf("/") + 1);
+			cats.push(catId);
+		}
         Categories = cats;
     }
     var url = applicationURL() + "rpt/repository/workitem?fields=workitem/workItem[" + Filter + "]/(id|itemHistory/(modified|target/itemId|category/itemId|state/group))";

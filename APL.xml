@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+	<ModulePrefs 
+		title="Approved Software"
+		height="200">
+		<Require feature="dynamic-height"/>
+	</ModulePrefs>
+	<Content type="html">
+		<![CDATA[
+			<html>
+				<head>
+					<link rel="stylesheet" href="DataTables/datatables.min.css">
+					<script src="scripts/jquery-3.3.1.js"></script>
+					<script src="scripts/common.js"></script>
+					<script src="scripts/APL.js"></script>
+					<script src="DataTables/datatables.min.js"></script>
+				
+					<script>
+						function initialize(){
+							if (typeof RTCWidget == 'undefined'){
+								document.getElementById('JavascriptError').classList.remove('hide');
+								document.getElementById('loadingDiv').style.display = 'none';
+								resized();
+							} else {
+								displayReport();
+							}
+						}
+						function resized(){
+							gadgets.window.adjustHeight();
+							resize();
+						}
+						function toggleInstructions(){
+							document.getElementById('instructionsContent').classList.toggle('hide');
+							resized();
+						}
+					</script>
+					<style>
+						.hide {
+							display:none;
+						}
+					</style>
+				</head>
+				<body onload="initialize()" onresize="resized()">
+					<div id='loadingDiv' style='height:100%;position:relative'>
+						<div style='margin:0;position:absolute;top:50%;left:50%;margin-right:-50%;transform:translate(-50%,-50%);text-align:center;'>
+							<div>
+								<svg width="32" height="32" viewBox="0 0 42 42">
+									<defs>
+										<linearGradient x1="8.042%" y1="0%" y2="100%" id="a">
+											<stop stop-color="#000" stop-opacity="0" offset="0%"/>
+											<stop stop-color="#000" stop-opacity=".231" offset="63.146%"/>
+											<stop stop-color="#000" offset="100%"/>
+										</linearGradient>
+									</defs>
+									<g fill="none" fill-rule="evenodd">
+										<g transform="translate(1 1)">
+											<path d="M36 20c0-9.94-8.06-20-20-20" stroke="url(#a)" stroke-width="6">
+												<animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="0.75s" repeatCount="indefinite"/>
+											</path>
+										</g>
+									</g>
+								</svg>
+							</div>
+							<div style='color:grey;'>
+								Loading 
+							</div>
+						</div> 
+					</div> 
+					<div style='display:none;width:calc(100% - 10px);margin:5px;' id='reportContentDiv'>
+						<table id='myDataTable' class='table table-striped table-hover' width="100%">
+						</table>
+					</div>
+					<div id='JavascriptError' class='hide'>
+						<twistButton class='helpButton' onclick='toggleInstructions();'>
+							<div style='font-weight:bold;font-size:16pt;width:100%;margin-top:-22px;'>
+								<div style='display:inline;'>
+									<svg height='60' viewbox="0 0 24 24" style='position:relative;top:22px;'>
+										<path d="M8.906 6v1.219l-1.828-1.828c0.281-2.484 2.344-4.406 4.922-4.406 2.766 0 5.016 2.25 5.016 5.016v2.016h0.984c1.078 0 2.016 0.891 2.016 1.969v8.344l-10.359-10.313h5.438v-2.016c0-1.688-1.406-3.094-3.094-3.094s-3.094 1.406-3.094 3.094zM21 21.797l-1.219 1.219-1.125-1.125c-0.188 0.047-0.422 0.094-0.656 0.094h-12c-1.078 0-2.016-0.891-2.016-1.969v-10.031c0-0.75 0.469-1.406 1.078-1.734l-2.063-2.016 1.219-1.219z"/>
+									</svg>
+								</div>
+								<div style='display:inline-block;padding:15px 0px;color:rgb(50,210,230);'>
+									Oops!
+								</div>
+								<div style='width:100px;font-weight:normal;display:inline;color:rgb(180,180,180);font-size:8pt;'>
+									Click for Help
+								</div>
+							</div>
+						</twistButton>
+						<div id='instructionsContent' class='hide' style='background-color:#fffeea;border-bottom-left-radius:20px;border-bottom-right-radius:20px;margin:0px 15px;padding:10px;'>
+							<div style='padding-bottom:10px;'>
+								<span style='font-weight:bold;'>This SWEG widget can't run!</span> Supported browsers include Firefox, Edge, and Chrome. Internet Explorer is not supported.<br><br>If you are using Firefox, a lack of trust is the most likely the cause of this message.
+							</div>
+							<div style='font-weight:bold;'>Establishing trust in Firefox:</div>
+								<ol>
+									<li>Open the <span style='font-weight:bold'>Firefox Options</span></li>
+									<li>Select "<span style='font-weight:bold'>Privacy and Security</span>"</li>
+									<li>Scroll to the bottom</li>
+									<li>Click "<span style='font-weight:bold'>View Certificates</span>"</li>
+									<li>Click "<span style='font-weight:bold'>Import</span>"</li>
+									<li>Select the Domain's Root Certificate from <span style='font-weight:bold;'>Z:\EN\Tools\CLM</span></li>
+									<li><span style='font-weight:bold;'>Enable all checkboxes</span></li>
+									<li>Click OK, OK, OK, OK!</li>
+									<li><span style='font-weight:bold;'>Refresh</span> this page and the widget should now load!</li>
+									<span style='color:grey;'><li>Optional: Remove any previously-made security exceptions (so that the lock in the address bar will be happy and green).</li></span>
+								</ol>
+								<div style='margin-top:-7px;text-align:center;font-size:7pt;color:rgb(207, 128, 70);'>
+									Still broken?<br>Call Dave at 777-2607
+								</div>
+							</div>
+						</div>
+					</div>
+				</body>
+			</html>
+		]]>
+	</Content>
+</Module>

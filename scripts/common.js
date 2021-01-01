@@ -1,4 +1,6 @@
 var RTCWidget = false;
+var RQMWidget = false;
+var RMWidget = false;
 var myUserName = '';
 var currentContributor;
 var runningThreads = 0;
@@ -19,13 +21,25 @@ function prefsSet(){
         return true;
     }
 }
+function baseUrl(){
+    if (RTCWidget){
+        return RTCURL();
+    } else if (RQMWidget) {
+        return RQMURL();
+    } else if (RMWidget){
+        return DOORSURL();
+    } else {
+        return applicationURL();
+    }
+}
 
 function showOptions(){
     document.getElementById('loadingDiv').style.display = "";
     document.getElementById('reportContentDiv').style.display = "none";
     document.getElementById('settingsDiv').style.display = "none";
     doInit();
-    var url = applicationURL() + "rpt/repository/foundation?fields=projectArea/projectArea[archived=false]/(name|itemId)";
+    
+    var url = baseUrl() + "rpt/repository/foundation?fields=projectArea/projectArea[archived=false]/(name|itemId)";
     getREST(url, setupProjectDD);
     
     if (document.getElementById('tbTitle')!=null){
@@ -160,27 +174,30 @@ function selectProject(){
     //As an example, the work item filter menu must have an id of ddWlTypes, as below, for this common function to populate it.
     if (document.getElementById('ddteamArea')!=null){
         runningThreads++;
-        var url = applicationURL() + "rpt/repository/foundation?fields=projectArea/projectArea[itemId=" + PAitemId + "]/(allTeamAreas/(name|itemId|archived))";
+        var url = baseUrl() + "rpt/repository/foundation?fields=projectArea/projectArea[itemId=" + PAitemId + "]/(allTeamAreas/(name|itemId|archived))";
         getREST(url, setupTeamDD);
     }
+
+
+    //RTC-Only Menu Items
     if (document.getElementById("ddWITypes")!=null){
         runningThreads++;
-        var url = applicationURL() + "oslc/types" + PAitemId + ".json";
+        var url = RTCURL() + "oslc/types" + PAitemId + ".json";
         getREST(url, setupWorkItemsDD, true);
     }
     if (document.getElementById('ddCats')!=null){
         runningThreads++;
-        var url = applicationURL() + "oslc/categories.json?oslc_cm.query=rtc_cm:projectArea=\"" + PAitemId + "\" and rtc_cm:archived=false";
+        var url = RTCURL() + "oslc/categories.json?oslc_cm.query=rtc_cm:projectArea=\"" + PAitemId + "\" and rtc_cm:archived=false";
         getREST(url, setupFiledAgainstDD, true);
     }
     if (document.getElementById("ddPlan")!=null){
         runningThreads++;
-        var url = applicationURL() + "rpt/repository/apt?fields=apt/iterationPlanRecord[archived=false and iteration/archived=false and owner/archived=false and contextId=" + PAitemId + "]/(name|itemId|iteration/(name|id)|owner/(name|itemId))";
+        var url = RTCURL() + "rpt/repository/apt?fields=apt/iterationPlanRecord[archived=false and iteration/archived=false and owner/archived=false and contextId=" + PAitemId + "]/(name|itemId|iteration/(name|id)|owner/(name|itemId))";
         getREST(url, setupPlanDD);
     }
     if (document.getElementById('querySelectionDiv')!=null){
         runningThreads++;
-        var url = applicationURL() + "service/com.ibm.team.workitem.common.internal.rest.IQueryRestService/scopedQueries?scope=3&includeCount=false&includeParentScopes=true&projectAreaItemId=" + PAitemId + "&suppressCrossRepoQueries=false";
+        var url = RTCURL() + "service/com.ibm.team.workitem.common.internal.rest.IQueryRestService/scopedQueries?scope=3&includeCount=false&includeParentScopes=true&projectAreaItemId=" + PAitemId + "&suppressCrossRepoQueries=false";
         getREST(url, setupQueryDD);
     }
     if (document.getElementById('ItemsPerPageDiv')!=null){
@@ -190,6 +207,15 @@ function selectProject(){
             document.getElementById('ItemsPerPageDiv').value = ItemsPerPage;
         }
     }
+    
+
+    //RQM-Only Menu Items...FIXME This function does not work yet.
+    if (document.getElementById('ddTestPlan')!=null){
+        runningThreads++;
+        var url = RQMURL() + "rpt/repository/foundation?fields=projectArea/projectArea[itemId=" + PAitemId + "]/(allTeamAreas/(name|itemId|archived))";
+        getREST(url, setupTeamDD);
+    }
+
     enableSave();
 }
 
@@ -414,7 +440,7 @@ function showForm() {
 
 function openQueryEditor(){
     var queryId = document.getElementById('selectedQueryId').textContent;
-    var url = applicationURL() + "resource/itemOid/com.ibm.team.workitem.query.QueryDescriptor/" + queryId;
+    var url = RTCURL() + "resource/itemOid/com.ibm.team.workitem.query.QueryDescriptor/" + queryId;
     window.open(url, "_blank");
  
 }
@@ -422,14 +448,6 @@ function openQueryEditor(){
 //######################################## End of Widget Preferences ########################################
 
 function applicationURL(){
-    if (RTCWidget){
-        return RTCURL();
-    } else {
-        return getPlainAppURL();
-    }
-}
-
-function getPlainAppURL(){
     var href = window.location.href;
     var len = href.indexOf("/", 9);
     var len = href.indexOf("/", len + 1) + 1;
@@ -437,10 +455,16 @@ function getPlainAppURL(){
 }
 
 function getNetwork(){
-    var appURL = getPlainAppURL().toUpperCase();
+    var appURL = applicationURL().toUpperCase();
     if (appURL.indexOf("JTS.HILL")>-1){
         return "NIPR";
-    } else {
+    } else if (appURL.indexOf("DEVNET1.HILL")>-1){
+        return "DEV";
+    } else if (appURL.indexOf("B1515CL.HILL")>-1){
+        return "SA";
+	} else if (appURL.indexOf("MMC.MIL")>-1){
+        return "ODE";
+	} else {
         //alert("Widget unable to determine network!");
         return "UNKNOWN Network in function getNetwork().";
     }
@@ -451,8 +475,57 @@ function RTCURL(){
         case 'NIPR':
             return "https://jts.hill.af.mil/ccm/";
             break;
+		case 'DEV':
+            return "https://apsmxgd-omrrtc.devnet1.hill.af.mil:9443/ccm/";
+            break;
+		case 'SA':
+            return "https://apsmxgc-omrrtc.b1515cl.hill.af.mil:9443/ccm/";
+            break;
+		case 'ODE':
+            return "https://rtc.mmc.mil/ccm";
+            break;
         default:
-        return getPlainAppURL();
+        return applicationURL();
+    }
+}
+
+function RQMURL(){
+    var Net = getNetwork();
+    switch (Net){
+        case 'NIPR':
+            return "https://jts.hill.af.mil/qm/";
+            break;
+		case 'DEV':
+            return "https://apsmxgd-omrrqm.devnet1.hill.af.mil/qm/";
+            break;
+		case 'SA':
+            return "https://apsmxgc-omrrqm.b1515cl.hill.af.mil:9443/qm/";
+            break;
+		case 'ODE':
+            return "https://rqm.mmc.mil/qm";
+            break;
+        default:
+        return applicationURL();
+    }
+}
+
+function DOORSURL(){
+    var Net = getNetwork();
+    switch (Net){
+        case 'NIPR':
+            return "https://jts.hill.af.mil/rm/";
+            break;
+		case 'DEV':
+            return "https://apsmxgd-omrrrc.devnet1.hill.af.mil:9443/rm/";
+            break;
+		case 'SA':
+            return "https://apsmxgc-omrrrc.b1515cl.hill.af.mil:9443/rm/";
+            break;
+		case 'ODE':
+            return "https://doors.mmc.mil/rm5";
+            break;
+        default:
+        return applicationURL();
     }
 }
 
@@ -478,49 +551,56 @@ function getCurrentUser(returnFunction){
 }
 
 function getREST(RESTurl, returnFunction, isJSON){
-if (RESTurl.indexOf("/rpt/repository")!==-1){
-    if (!(RESTurl.indexOf("&size=")!==-1)){
-        RESTurl+="&size=10000"
+    if (RESTurl.indexOf("/rpt/repository")!==-1){
+        if (!(RESTurl.indexOf("&size=")!==-1)){
+            RESTurl+="&size=10000"
+        }
     }
-}
-isJSON = isJSON||false;
-$.ajax({
-    async:true,
-    xhrFields: {withCredentials: true},
-    url: RESTurl,
-    headers:{
-    'Accept' : 'application/xml',
-    },
-    success:function(data){
-        if (isJSON){
-            var rows = data;
-        } else {
-            if (data.childNodes[0].nodeName=='#comment'){
-                retItems = data.childNodes[1].childNodes;
+    
+    RESTurl = proxyURL(RESTurl);
+    isJSON = isJSON||false;
+    $.ajax({
+        url: RESTurl,
+        headers:{
+        'Accept' : 'application/xml',
+        },
+        success:function(data){
+            if (isJSON){
+                var rows = data;
             } else {
-                retItems = data.childNodes[0].childNodes;
-            }
-            var rows = [];
-            for (var retItem of retItems){
-                var objI;
-                if (retItem.nodeName!='#text'){
-                    objI = objParseChildNodes(retItem);
-                    rows.push(objI);
+                if (data.childNodes[0].nodeName=='#comment'){
+                    retItems = data.childNodes[1].childNodes;
+                } else {
+                    retItems = data.childNodes[0].childNodes;
+                }
+                var rows = [];
+                for (var retItem of retItems){
+                    var objI;
+                    if (retItem.nodeName!='#text'){
+                        objI = objParseChildNodes(retItem);
+                        rows.push(objI);
+                    }
                 }
             }
+            returnFunction(rows);
+        },
+        error:function(error){
+            console.error(error);
+            alert('Your session has expired.\nPlease refresh this page to login.');
         }
-        returnFunction(rows);
-    },
-    error:function(error){
-        console.error(error);
-        alert('Your session has expired.\nPlease refresh this page to login.');
-    }
-});
+    });
 }
 
 function getRESTJSON(RESTurl, returnFunction){
+	var isAsync = true;
+	var rows;
+	if (returnFunction == null) {
+		isAsync=false;
+	}
+	
+    RESTurl = proxyURL(RESTurl);
     $.ajax({
-        async:true,
+        async:isAsync,
         xhrFields: {withCredentials: true},
         url: RESTurl,
         type: 'GET',
@@ -528,27 +608,50 @@ function getRESTJSON(RESTurl, returnFunction){
         'Accept' : 'text/json'
         },
         success:function(data){
-            var rows = data;
-            returnFunction(rows);
+            rows = data;
+			if (data['oslc_cm:next']){
+                var data2 = getRESTJSON(data['oslc_cm:next']);
+                if (data2['oslc_cm:results']){
+                    results2 = data2;
+                } else {
+                    results2['oslc_cm:results'] = data2;
+                }
+                for (var item of results2['oslc_cm:results']){
+                    rows['oslc_cm:results'].push(item);
+                }
+            }
+			
+			if (returnFunction!=null){
+				returnFunction(rows);
+			}
         },
         error: function(error){
             console.error(error);
             alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
+	if (returnFunction!=null){
+		return rows;
+	}
 }
 
-function returnAllOSLCResults(url){
-    var allData
+function returnAllOSLCResults(url, returnFunction, removeOSLCMarkup){
+	var isAsync = true;
+	if (returnFunction==null) {
+		isAsync = false;
+	}
+    url = proxyURL(url);
+
+    var results = new Object();
+    
     $.ajax({
-        async:false,
+        async:isAsync,
         xhrFields: {withCredentials: true},
         url: url,
         headers:{
         'Accept' : 'application/json'
         },
         success:function(data){
-            var results = new Object();
             if (typeof data['oslc_cm:results'] != 'undefined'){
                 results = data;
             } else {
@@ -565,30 +668,47 @@ function returnAllOSLCResults(url){
                     results['oslc_cm:results'].push(item);
                 }
             }
-            allData = results;
+            if (returnFunction!=null){
+            	if (removeOSLCMarkup){
+					var items = [];
+					for (var wi of results["oslc_cm:results"]){
+						items.push(parseOSLCNodes(wi));
+					}
+					returnFunction(items);
+				} else {
+					returnFunction(results);
+				}
+            }
         },
         error: function(error){
             console.error(error);
             alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
-    return allData;
+    if (returnFunction==null) {
+		return results;
+	}
 }
 
 function runStoredQuery(queryId, returnFunction, propString, removeOSLCMarkup){//THIS IS A SYNCHRONOUS FUNCTION CALL, unlike getREST, which is async.
-    url = applicationURL() + 'oslc/queries/' + queryId + '/rtc_cm:results.json';
+    url = RTCURL() + 'oslc/queries/' + queryId + '/rtc_cm:results.json';
     if (propString!=''){
         url+= "?oslc_cm.properties=" + propString;
     }
-    var rows = returnAllOSLCResults(url);
-    if (removeOSLCMarkup){
-        var items = [];
-        for (var wi of rows["oslc_cm:results"]){
-            items.push(parseOSLCNodes(wi));
-        }
-        returnFunction(items);
+    
+    if (returnFunction == null){
+        var rows = returnAllOSLCResults(url);
+		 if (removeOSLCMarkup){
+			var items = [];
+			for (var wi of rows["oslc_cm:results"]){
+				items.push(parseOSLCNodes(wi));
+			}
+			returnFunction(items);
+		} else {
+			returnFunction(rows);
+		}
     } else {
-        returnFunction(rows);
+    	returnAllOSLCResults(url, returnFunction, removeOSLCMarkup);
     }
 }
 
@@ -625,6 +745,7 @@ function getWorkingWI(WIId, OSLCproperties, returnFunction){
 		var oProps = "";
 	}
 	var URL = RTCURL() + "resource/itemName/com.ibm.team.workitem.WorkItem/" + WIId + oProps;
+	URL = proxyURL(URL);
     var response = $.ajax({
         xhrFields: {withCredentials: true},
         url: URL, type: 'GET', async:isAsync, timeout:5000,
@@ -699,6 +820,13 @@ function objParseChildNodes(element){
         } 
     }
     return returnObj;
+}
+
+function proxyURL(url) {
+	if (url.indexOf(applicationURL()) != 0) {
+        url = applicationURL() + "proxy?uri=" + encodeURIComponent(url);
+    }
+    return url;
 }
 
 function closedStatesFilter(){

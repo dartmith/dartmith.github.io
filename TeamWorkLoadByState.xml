@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?> 
+<Module>
+  <ModulePrefs title="Team Workload by State" height="200">
+    <Require feature="dynamic-height"/>
+    <Require feature="setprefs"/>
+  </ModulePrefs>
+  <UserPref name="Projectid" datatype="hidden"/>
+  <UserPref name="ProjectName" datatype="hidden"/>
+  <UserPref name="Teamid" datatype="hidden"/>
+  <UserPref name="Queryid" datatype="hidden"/>
+  <Content type="html">
+		<![CDATA[
+      <html>
+        <head>
+          <link rel="stylesheet" href="css/pupTip.css">
+          <script src="scripts/jquery-3.3.1.js"></script>
+          <script src="scripts/common.js"></script>
+          <script src="scripts/TeamWorkloadByState.js"></script>
+          <script>
+            function initialize(){
+              if (typeof RTCWidget == 'undefined'){
+                document.getElementByid('JavascriptError').classlist.remove('hide');
+                document.getElementByid('loadingDiv').classList.add('hide');
+                resized();
+              } else {
+                displayReport();
+              }
+            }
+            function resized(){
+              gadgets.window.adjustHeight();
+            }
+            function toggleinstructions(){
+              document.getElementByid('instructionsContent').classList.toggle('hide');
+              resized();
+            }
+          </script>
+          <style>
+            .hide{
+              display:none;
+            }
+            .svgButton {
+              color:rgb(50,50,50);
+              background-color:transparent;
+              fill: rgb(190,190,190);
+              cursor:pointer;
+              padding:4px;
+            }
+            .svgButton:hover{
+              color:rgb(0,0,0);
+              background: radial-gradient(rgba(0,0,0,0.07), rgba(0,0,0,.07));
+              fill: rgb(0,0,0);
+            }
+            .svgHollowButton {
+              stroke: rgb(190,190,190);
+              background-color:transparent;
+              cursor:pointer;
+              padding:4px;
+            }
+            .svgHollowButton:hover{
+              background: radial-gradient(rgba(0,0,0,0.07), rgba(0,0,0,.07));
+              stroke: rgb(0,0,0);
+            }
+            .svgleft {
+              padding-right: 2px;
+              float:left;
+            }
+            .svgindented{
+              padding-left:30px;
+            }
+            .svgRoatated{
+              transform:rotate(90deg);
+            }
+            .svgSelected {
+              background: radial-gradient(rgba(0,200,0,0.25), rgba(0,255,0,0.25));
+            }
+            .hoverBlue:hover{
+              background: radial-gradient(rgba(0,100,200,0.2), rgba(0,100,200,0.1));
+        
+            .hoverWhite:hover{
+              background: radial-gradient(rgba(255,255,255,0.3), rgba(255,255,255,0.1));
+            }
+            .helpButton {
+              fill: rgb(255,128,128);
+              cursor:pointer;
+              padding:5px;
+              background-color:rgba(0,100,200,0.05);
+              border-radius:10px;
+            }
+            .helpButton:hover{
+              background: radial-gradient(rgba(0,100,200,0.2), rgba(0,100,200,0.1)); fill: red;
+            }
+            queryButton,twistie,twistButton{
+              display:block;
+              -	webkit-touch-callout:none;
+              -	webkit-user-select: none;
+              -	khtml-user-select: none;
+              -	moz-user-select:none;
+              -	ms-user-select: none; user-select: none;
+            }
+          </style>
+        </head>
+        <body onload=" initialize()" onresize="resized ()">
+          <div id=' settingsDiv' style='display: none; width: 100%;'>
+            <div style='font-size:14pt;margin-top:0px;margin-bottom:4px;'>Settings</div>
+            <div style='padding:5px;'>
+              <table style='width:100%;'>
+                <tr>
+                  <td style='width:115px;'>Project Area:</td>
+                  <td>
+                    <select onchange='selectProject()' id='ddprojectArea' style='width:100%'>
+                    </select>
+                  </td>
+                </tr>
+                <tr id='teamAreaRow' style='display:none;'>
+                  <td>Team Area:</td>
+                  <td>
+                    <select id='ddteamArea' style='width:100%'>
+                    </select>
+                  </td>
+                </tr>
+                <tr id='SelQueryRow' style='display:none;'>
+                  <td>Query:</td>
+                  <td style='padding-right:3px;'>
+                    <div id='selectedQueryid' style='display:none; '></div>
+                    <div style='padding:3px 5px;width:calc(100% - 10px);border:0.25px;border-style:solid;font-size:9pt;border-Color:rgb(120,120,120);'>
+                      <span id='selectedQueryName'>
+                        Select a Query ...
+                      </span>
+                      <span style='float:right;' onclick='openQueryEditor()' title='Open Query'>
+                        <svg id='editQueryButton' class='svgHollowButton' style='display:none;padding-top:1px;position:relative;top:-2px;right:- 5px;' width='16' viewBox='0 0 24 24' xmlns='http://www.w3.org/2000/svg'>
+                          <polygon fill='none' points='16 3 21 8 8 21 3 21 3 16 16 3' stroke-linecap='round' stroke-linejoin='round' stroke-width='2'/>
+                        </svg>
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+                <tr id='QuerySelector' style='display:none;'>
+                  <td></td>
+                  <td style='padding-right:3px;'>
+                    <div id='querySelectionDiv' style='width:100%;border:0.25px;border-style:solid;font-size:9pt;border-radius:5px;border-color:rgb(120,120,120);'>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+              <button onclick="closeSettings()" style="float:right;margin-top:10px;margin-bottom:10px;padding-bottom:3px;">Close</button>
+              <button onclick="applySettings()" id="btnSaveSettings" style="float:right;margin-top:10px;margin-bottom:10px;padding�bottom:3px;" disabled>Apply</button>
+            </div>
+          </div>
+          <div id='loadingDiv' style='height:100%;position:relative'>
+				    <div style='margin:0;position:absolute;top:50%;left:50%;margin-right:-50%;transform:translate(-50%,-50%);text-align:center;'>
+					    <div>
+						    <svg width="32" height="32" viewBox="0 0 42 42">
+							    <defs>
+								    <linearGradient x1="8.042%" y1="0%" y2="100%" id="a">
+									    <stop stop-color="#000" stop-opacity="0" offset="0%"/>
+									    <stop stop-color="#000" stop-opacity=".231" offset="63.146%"/>
+									    <stop stop-color="#000" offset="100%"/>
+								    </linearGradient>
+							    </defs>
+							    <g fill="none" fill-rule="evenodd">
+								    <g transform="translate(1 1)">
+									    <path d="M36 20c0-9.94-8.06-20-20-20" stroke="url(#a)" stroke-width="6">
+										    <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="0.75s" repeatCount="indefinite"/>
+									    </path>
+								    </g>
+							    </g>
+						    </svg>
+					    </div>
+					    <div style='color:grey;'>
+						    Loading 
+					    </div>
+				    </div> 
+			    </div>
+          <div style='display:none;width:100%;' id='reportContentDiv'>
+            <div>
+              <div style='float:left;font-size:14pt;padding-bottom:5px;padding-right:5px;'>
+                Team Workload by State
+              </div>
+              <div style='float:left;'>
+                <svg onclick='showOptions()' width='12' class='svgButton' viewBox='0 0 60 74' xmlns='http://www.w3.org/2000/svg'>
+                  <path d="M57,32h-2.58c-1.374-3.881-5.067-6.667-9.419-6.667S36.955.28.119,35.581,32H3c-1.657,0-3,1.343-3.3 c0,1.656,1.343,3.3.3h32.371c1.168,4.224,5.03117.33419.629,7.334s8.461-3.107,9.629-7.334H57c1.657,013-1.34413-3 C60,33.343,58.657,32,57,32z"/>
+                  <path d="M57,58H24.419c-1.374-3.881-5.067-6.666-9.419-6.666S6.955154.119,5.581,58H3c-1.657,0-3,1.344-3,3 s1.343,3,3,3h2.371c1.168,4.227,5.031,7.334,9.629,7.334s8.461-3.107,9.629-7.334H57c1.657,0,3-1.344,3-3S58.657,58,57,58z"/> <path d="M3,13h2.371c1.168,4.227,5.031,7.333,9.629,7.333s8.467-3.107,9.629-7.333H57c1.657,0,3-1.343,3-3 s-1.343-3-3- 3H24.419C23.045,3.119,19.352,0.333,15,0.333S6.955,3.119,5.581,7H3c-1.657,0-3,1.343-3,3S1.343,13,3,13z"/>
+                </svg>
+              </div>
+            </div>
+            <div class='legend' style="position:fixed;top:10ox:right:10px">
+              <table style='font-size:9pt;'>
+                <tbody id='legendTable'>
+                </tbody>
+              </table>
+            </div>
+            <div style="width:100%">
+              <table style='width:100%;font-size:9pt;'>
+                <tbody id='reportTableBody'>
+              </tbody>
+            </table>
+          </div>
+          <div id='JavascriptError' class='hide'>
+				    <twistButton class='helpButton' onclick='toggleInstructions();'>
+					    <div style='font-weight:bold;font-size:16pt;width:100%;margin-top:-22px;'>
+						    <div style='display:inline;'>
+							    <svg height='60' viewbox="0 0 24 24" style='position:relative;top:22px;'>
+								    <path d="M8.906 6v1.219l-1.828-1.828c0.281-2.484 2.344-4.406 4.922-4.406 2.766 0 5.016 2.25 5.016 5.016v2.016h0.984c1.078 0 2.016 0.891 2.016 1.969v8.344l-10.359-10.313h5.438v-2.016c0-1.688-1.406-3.094-3.094-3.094s-3.094 1.406-3.094 3.094zM21 21.797l-1.219 1.219-1.125-1.125c-0.188 0.047-0.422 0.094-0.656 0.094h-12c-1.078 0-2.016-0.891-2.016-1.969v-10.031c0-0.75 0.469-1.406 1.078-1.734l-2.063-2.016 1.219-1.219z"/>
+							    </svg>
+						    </div>
+						    <div style='display:inline-block;padding:15px 0px;color:rgb(50,210,230);'>
+							    Oops!
+						    </div>
+						    <div style='width:100px;font-weight:normal;display:inline;color:rgb(180,180,180);font-size:8pt;'>
+							    Click for Help
+						    </div>
+					    </div>
+				    </twistButton>
+				    <div id='instructionsContent' class='hide' style='background-color:#fffeea;border-bottom-left-radius:20px;border-bottom-right-radius:20px;margin:0px 15px;padding:10px;'>
+					    <div style='padding-bottom:10px;'>
+						    <span style='font-weight:bold;'>This SWEG widget can't run!</span> Supported browsers include Firefox, Edge, and Chrome. Internet Explorer is not supported.<br><br>If you are using Firefox, a lack of trust is the most likely the cause of this message.
+					    </div>
+					    <div style='font-weight:bold;'>Establishing trust in Firefox:</div>
+						    <ol>
+							    <li>Open the <span style='font-weight:bold'>Firefox Options</span></li>
+							    <li>Select "<span style='font-weight:bold'>Privacy and Security</span>"</li>
+							    <li>Scroll to the bottom</li>
+							    <li>Click "<span style='font-weight:bold'>View Certificates</span>"</li>
+							    <li>Click "<span style='font-weight:bold'>Import</span>"</li>
+							    <li>Select the Domain's Root Certificate from <span style='font-weight:bold;'>Z:\EN\Tools\CLM</span></li>
+							    <li><span style='font-weight:bold;'>Enable all checkboxes</span></li>
+							    <li>Click OK, OK, OK, OK!</li>
+							    <li><span style='font-weight:bold;'>Refresh</span> this page and the widget should now load!</li>
+							    <span style='color:grey;'><li>Optional: Remove any previously-made security exceptions (so that the lock in the address bar will be happy and green).</li></span>
+						    </ol>
+						    <div style='margin-top:-7px;text-align:center;font-size:7pt;color:rgb(207, 128, 70);'>
+							    Still broken?<br>Call Dave at 777-2607
+						    </div>
+					    </div>
+				    </div>
+			    </div>
+        </body>
+      </html>
+    ]]>
+  </Content>
+</Module> 
+
