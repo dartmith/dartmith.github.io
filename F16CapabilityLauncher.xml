@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+	<ModulePrefs 
+		title="Capability Launcher"
+		height="34">
+		<Require feature="dynamic-height"/>
+		<Require feature="setprefs"/>
+	</ModulePrefs>
+	<Content type="html">
+		<![CDATA[
+			<html>
+				<head>
+					<style>
+						.button1 {
+							cursor:pointer;
+							display:inline-block;
+							padding:4px 8px;
+							border:1px solid #4c6373;
+							margin:2px;
+							border-radius:2.8px;
+							box-sizing: border-box;
+							font-family:'Roboto',sans-serif;
+							color:#FFFFFF;
+							background-color:#80b4d6;
+							text-align:center;
+							transition: all 0.15s;
+						}
+						.button1:hover {
+							color:#000000;
+							background-color:#dff2ff;
+						}
+					</style>
+					<link rel="stylesheet" href="css/widgets.css">
+					<script src="scripts/jquery-3.3.1.js"></script>
+					<script src="scripts/common.js"></script>
+					<script src="scripts/F16CapabilityLauncher.js"></script>
+					<script>
+						function initialize(){
+							gadgets.window.adjustHeight();
+							var url = RTCURL() + "oslc/iterations.json?oslc.where=\"rtc_cm:projectArea=https://maximus:9443/ccm/oslc/projectareas/_GbDyUEfMEeyvVI7qR4G3mw\"";
+        					getREST(url, setupPlannedForDD, true);
+						}
+					</script>
+				</head>
+				<body onload="initialize()">
+					<div id='questionsDiv' style="display:none;">
+						<div>Capability Name</div>
+						<input style="width:100%;" id="cTitle" type="text"/>
+						<div style="display:block;padding-top:8px;">Planned For</div>
+						<div id='plannedForSelectionDiv' style='width:calc(100%-1px);border:1px;border-style:solid;font-size:9pt;border-radius:5px;border-color:rgb(120,120,120);'>
+						</div>
+					</div>
+
+					<div id='linkDiv'>
+						<div id="lButtonText" style="display:block;" class="button1" onclick="launchTemplate()">Launch New Capability</div>
+					</div>
+					<div id="selectedPlannedForUrl" style="display:none;"></div>
+				</body>
+			</html>
+		]]>
+	</Content>
+</Module>

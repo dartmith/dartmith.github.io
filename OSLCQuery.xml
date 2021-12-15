@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+	<ModulePrefs 
+		title="OSLC Query"
+		height="34">
+		<Require feature="dynamic-height"/>
+	</ModulePrefs>
+	<Content type="html">
+		<![CDATA[
+			<html>
+				<head>
+					<script src="scripts/jquery-3.3.1.js"></script>
+					<script src="scripts/common.js"></script>
+					<script>
+						function initialize(){
+							resized();
+						}
+						function runQuery(){
+							var url = document.getElementById("inputText").value;
+							getOSLC(url);
+						}
+					</script>
+				</head>
+				<body onload="initialize()">
+					<input type="text" id="inputText">
+					<button id='btnGo' onclick="runQuery()">
+						Go!
+					</div>
+				</body>
+			</html>
+		]]>
+	</Content>
+</Module>

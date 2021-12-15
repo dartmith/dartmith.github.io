@@ -200,6 +200,11 @@ function selectProject(){
         var url = RTCURL() + "service/com.ibm.team.workitem.common.internal.rest.IQueryRestService/scopedQueries?scope=3&includeCount=false&includeParentScopes=true&projectAreaItemId=" + PAitemId + "&suppressCrossRepoQueries=false";
         getREST(url, setupQueryDD);
     }
+    if (document.getElementById('plannedForSelectionDiv')!=null){
+        runningThreads++;
+        var url = RTCURL() + "oslc/iterations.json?oslc_cm.query=rtc_cm:projectArea=\"" + PAitemId + "\" and rtc_cm:archived=false";
+        getREST(url, setupPlannedForDD, true);
+    }
     if (document.getElementById('ItemsPerPageDiv')!=null){
         var prefs = new gadgets.Prefs();
         var ItemsPerPage = prefs.getString("ItemsPerPage");
@@ -430,6 +435,107 @@ function setupQueryDD(QueryJSON){
     resized();
 }
 
+function setupPlannedForDD(iterations){
+    var prefs = new gadgets.Prefs();
+    var queryId = prefs.getString("QueryId");
+    var PFDiv = document.getElementById('plannedForSelectionDiv');
+    var Timelines = new Object();
+    for(var i of iterations["oslc_cm:results"]){
+    	if (i["rtc_cm:parent"]==null){
+    		var timelineURL = i["rtc_cm:timeline"]["rdf:resource"];
+    		if (Timelines[timelineURL]==null){
+    			var t = getREST(timelineURL);
+    			Timelines[timelineURL] = new Object();
+    			Timelines[timelineURL].Name = t[1];
+    		}
+    	}
+    }
+    for (var tURL in Timelines){
+    	Timelines[tURL].ChildIterations = getChildIterations(tURL, iterations);
+    }
+    var o = "";
+    for (var tURL of Object.keys(Timelines)){
+    	var T = Timelines[tURL];
+		o += genPlannedForChildren(tURL, T);
+    }
+
+    PFDiv.innerHTML = o;
+    for (var item of document.querySelectorAll('twistButton')){
+        item.addEventListener('click', function(){
+            var iUrl = this.attributes.value.textContent;
+            this.parentNode.querySelector('#arrowSVG').classList.toggle('svgRoatated');
+            this.parentNode.querySelector('#twistContent').classList.toggle('hide');
+            if (iUrl!=""){
+                for (var button of document.querySelectorAll('queryButton')){
+                    button.classList.remove('svgSelected');
+                }
+                for (var button of document.querySelectorAll('twistButton')){
+                    button.classList.remove('svgSelected');
+                }
+                this.classList.add('svgSelected');
+                document.getElementById('selectedPlannedForUrl').innerHTML = iUrl;
+            }
+            resized();
+        });
+    }
+    for (var item of document.querySelectorAll('queryButton')){
+        item.addEventListener('click', function(){
+            for (var button of document.querySelectorAll('queryButton')){
+                button.classList.remove('svgSelected');
+            }
+            for (var button of document.querySelectorAll('twistButton')){
+                button.classList.remove('svgSelected');
+            }
+            this.classList.add('svgSelected');
+            document.getElementById('selectedPlannedForUrl').innerHTML = this.firstChild.attributes.value.textContent;
+        });
+    }
+
+
+    resized();
+}
+
+function genPlannedForChildren(nodeUrl, node){
+	var o = "";
+    if (Object.keys(node.ChildIterations).length > 0 ){
+        if (nodeUrl.indexOf("/timelines/")!=-1){
+            nodeUrl = "";
+        }
+        o += "<twistie><twistButton class='svgButton' value='" + nodeUrl + "'>";
+		o += node.Name;
+		o += "<div class='svgLeft'><svg id='arrowSVG' width='14' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'><polygon points='50,20 50,80 80,50 50,20'/></svg></div></twistButton><div id='twistContent' class='hide svgIndented'>";
+		for (var childUrl in node.ChildIterations){
+			o += genPlannedForChildren(childUrl, node.ChildIterations[childUrl]);
+		}
+        o +="</div></twistie>";
+    } else{
+        o += "<queryButton><div class='svgButton' value='" + nodeUrl + "'>";
+			o += node.Name;
+			o += "</div></queryButton>";
+    }
+    return o; 
+}
+
+function getChildIterations(parentUrl, iterations){
+	var pAttr = "rtc_cm:parent";
+	if (parentUrl.indexOf("/timelines/") !==-1) {
+		pAttr = "rtc_cm:timeline";
+	}
+
+	var cIters = new Object();
+	for (var i of iterations["oslc_cm:results"]){
+		if (i[pAttr] != null){
+			if (i[pAttr]["rdf:resource"] == parentUrl){
+				var iUrl = i["rdf:resource"];
+				cIters[iUrl] = new Object();
+				cIters[iUrl].Name = i["dc:title"];
+				cIters[iUrl].ChildIterations = getChildIterations(iUrl, iterations);
+			}
+		}
+	}
+   return cIters;
+}
+
 function showForm() {
     runningThreads--;
     if (runningThreads==0){
@@ -550,45 +656,93 @@ function getCurrentUser(returnFunction){
     });
 }
 
-function getREST(RESTurl, returnFunction, isJSON){
+function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false){
+    var isAsync = true;
+	var rows;
+	if (returnFunction == null) {
+		isAsync=false;
+	}
+
     if (RESTurl.indexOf("/rpt/repository")!==-1){
         if (!(RESTurl.indexOf("&size=")!==-1)){
             RESTurl+="&size=10000"
         }
+    }
+    if (RESTurl.indexOf(".json")!==-1) {
+    	isJSON = true;
     }
     
     RESTurl = proxyURL(RESTurl);
     isJSON = isJSON||false;
     $.ajax({
         url: RESTurl,
+        async:isAsync,
         headers:{
         'Accept' : 'application/xml',
         },
         success:function(data){
             if (isJSON){
-                var rows = data;
+                rows = data;
             } else {
                 if (data.childNodes[0].nodeName=='#comment'){
                     retItems = data.childNodes[1].childNodes;
                 } else {
                     retItems = data.childNodes[0].childNodes;
                 }
-                var rows = [];
+                rows = [];
                 for (var retItem of retItems){
                     var objI;
                     if (retItem.nodeName!='#text'){
-                        objI = objParseChildNodes(retItem);
+                    	objI = objParseChildNodes(retItem, removePrefixes);
                         rows.push(objI);
                     }
                 }
             }
-            returnFunction(rows);
+            rows["RESTurl"] = RESTurl;
+            if (returnFunction!=null){
+				returnFunction(rows);
+			}
         },
         error:function(error){
             console.error(error);
             alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
+    if (returnFunction==null){
+		return rows;
+	}
+}
+
+
+function getOSLC(OSLCurl, returnFunction){
+    //OSLCurl = proxyURL(OSLCurl);
+    var rows;
+    $.ajax({
+        url: OSLCurl,
+        async:false,
+        headers:{
+        'Accept' : 'application/rdf+xml',
+        'OSLC-Core-Version' : '2.0'
+        },
+        success:function(data){
+            rows = data;
+            rows['OSLCurl'] = OSLCurl;
+            if (returnFunction!=null){
+				returnFunction(rows);
+			}
+        },
+        error:function(error){
+        	rows = error;
+        	rows['OSLCurl'] = OSLCurl;
+            console.error(error);
+            if (returnFunction!=null){
+				returnFunction(rows);
+			}
+        }
+    });
+	 if (returnFunction==null){
+		return rows;
+	}
 }
 
 function getRESTJSON(RESTurl, returnFunction){
@@ -630,7 +784,7 @@ function getRESTJSON(RESTurl, returnFunction){
             alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
-	if (returnFunction!=null){
+	if (returnFunction==null){
 		return rows;
 	}
 }
@@ -720,7 +874,9 @@ function parseOSLCNodes(element){
         for (var prop in element){
             name = prop.replace("rtc_cm:", "");
             name = name.replace("oslc_cm:", "");
+            name = name.replace("rrm:", "");
             name = name.replace("dc:", "");
+            name = name.replace("ds:", "");
             name = name.replace("identifier", "id");
             name = name.replace("rdf:resource", "url");
             returnObj[name] = parseOSLCNodes(element[prop]);
@@ -775,12 +931,16 @@ function getWorkingWI(WIId, OSLCproperties, returnFunction){
 	}
 }
 
-function objParseChildNodes(element){
+function objParseChildNodes(element, removePrefixes=false){
     var returnObj = Object();
     if (element.attributes != null){
         if (element.attributes.length>0){
             for (var attr of element.attributes){
-                returnObj[attr.name] = attr.value;
+            	if (removePrefixes){
+            		returnObj[rPrefix(attr.name)] = attr.value;
+            	} else {
+            		returnObj[attr.name] = attr.value;
+            	}
             }
         }
     }
@@ -790,7 +950,12 @@ function objParseChildNodes(element){
         } else {
             var curName;
             for (var childNode of element.childNodes){
-                curName = childNode.nodeName;
+            	if (removePrefixes){
+                    curName = rPrefix(childNode.nodeName);
+            	} else {
+            		curName = childNode.nodeName;
+            	}
+                
                 var processMe = false;
                 if (curName=='#text'){
                     if (/\S/.test(childNode.textContent)){
@@ -799,8 +964,10 @@ function objParseChildNodes(element){
                 } else {
                     processMe = true;
                 }
-                if (processMe){
-                    curValue = objParseChildNodes(childNode);
+                if (curName=="primaryText"){
+                	returnObj["primaryText"] = childNode.innerHTML;
+                } else  if (processMe){
+                    curValue = objParseChildNodes(childNode, removePrefixes);
                     if (returnObj[curName]==null){
                         returnObj[curName] = curValue;
                     } else {
@@ -820,6 +987,15 @@ function objParseChildNodes(element){
         } 
     }
     return returnObj;
+}
+
+function rPrefix(i){
+	var sRng = i.indexOf(":");
+	if (sRng > 0){
+		return i.substr(sRng+1);
+	} else {
+		return i;
+	}
 }
 
 function proxyURL(url) {

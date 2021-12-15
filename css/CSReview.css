@@ -1,0 +1,123 @@
+#main {
+display: flex;
+flex-direction: column;
+height: 100%;
+}
+
+/* **************************** */
+/* ***** work item styles ***** */
+/* **************************** */
+#workitemContainer {
+flex: 1;
+display: flex;
+justify-content: center;
+}
+
+#workitemform {
+align-items: center;
+display: flex;
+flex-direction: column;
+margin: 0;
+padding: 5px;
+}
+
+#workiteminputContainer {
+display: flex;
+align-items: center;
+}
+
+#workItemInput {
+padding: 2 10;
+border: 0;
+border-bottom: 1px solid #444;
+margin: 15;
+outline: none;
+width:110px;
+}
+
+#workiteminputSearchButton {
+padding: 5px; 
+} 
+
+/* ************************* */
+/* ***** review styles ***** */
+/* ************************* */
+
+#moduleListContainer {width:20%;overflow-y:auto;height:100%;}
+#contentViewContainer {width:60%;overflow-y:auto;height:100%;}
+#attributeViewContainer {width:20%;overflow-y:auto;height:100%;}
+
+.moduleLineContent {
+    margin: 0;
+    padding: 10;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    font-size: 10pt;
+    cursor: pointer;
+    }
+
+.moduleLineContent:hover {
+    background-color:#dbdbdb;
+}
+
+.moduleLineItem {
+color: black;
+text-decoration: none;
+cursor: pointer;
+}
+
+.moduleLineContent:active {
+background-color: #83ff76;
+}
+
+
+
+.textContent {margin:0;
+    padding: 3 10;
+    white-space: normal;
+    overflow: hidden;
+    font-size: 10pt;
+    cursor: pointer;
+    font-family:Arial, Verdana, sans-serif;
+    border-bottom: 1px solid #d0d0d0;
+    border-left:1px #d0d0d0 solid;
+    border-right:1px #d0d0d0 solid;
+    }
+
+.added{
+    border-left:4px #78ff78 solid;
+}
+.changed{
+    border-left:4px #81eeff solid;
+}
+.deleted{
+    border-left:4px #ff8484 solid;
+}
+
+.selected{
+    border-left:4px #5cb000 solid;
+    border-bottom:1px solid #5cb000;
+    border-top:1px solid #5cb000;
+    background-color:#f5fff5;
+    font-weight:bold;
+}
+
+h1.textContent {font-size: 17pt;}
+h2.textContent {font-size: 15pt;}
+h3.textContent {font-size: 13pt;}
+h4.textContent {font-size: 11pt;}
+h5.textContent {font-size: 11pt;}
+
+.header{
+    height:32;
+    margin:0;
+    font-size:11pt;
+    background-color:#f0f0f0;
+    border-bottom:#bebebe 1px solid;
+    display:none;
+}
+
+p {margin:0px;}
+
+table{border-spacing:0;border-collapse:collapse;}

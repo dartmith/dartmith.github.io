@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Module>
+    <ModulePrefs title="DOORS Changeset Review" height='680'>
+        <Require feature="dynamic-height"/>
+        <!-- <Require feature="com.ibm.rdm.rm.api"></Require> -->
+    </ModulePrefs>
+    <Content type="html">
+    <![CDATA[
+    <link rel="stylesheet" href="css/CSReview.css"/>
+    <link rel="import" href="CSReview.html"/>
+    <div id="root"/>
+    <script src="scripts/jquery-3.3.1.js"></script>
+    <script src="scripts/common.js"></script>
+    <script src="scripts/CSReview.js"></script>
+    <script>
+    // takes main-html and attaches it to the root div here
+    // doing it this way for syntax highlighting in the other files
+    $(document).ready(() => $('#root').load('CSReview.html'));
+    </script>
+    ]]>
+    </Content>
+</Module>
