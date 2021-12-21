@@ -10,31 +10,30 @@
             <div id="changeSetReviewItems"></div>
         </div>
     </div>
-    <div id='loadingDiv' style='height:100%;position:relative'>
-        <div style='margin:0;position:fixed;top:10%;left:50%;margin-right:-50%;transform:translate(-50%,-50%);text-align:center;'>
-            <div>
-                <svg width="32" height="32" viewBox="0 0 42 42">
-                    <defs>
-                        <linearGradient x1="8.042%" y1="0%" y2="100%" id="a">
-                            <stop stop-color="#000" stop-opacity="0" offset="0%"/>
-                            <stop stop-color="#000" stop-opacity=".231" offset="63.146%"/>
-                            <stop stop-color="#000" offset="100%"/>
-                        </linearGradient>
-                    </defs>
-                    <g fill="none" fill-rule="evenodd">
-                        <g transform="translate(1 1)">
-                            <path d="M36 20c0-9.94-8.06-20-20-20" stroke="url(#a)" stroke-width="6">
-                                <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="0.75s" repeatCount="indefinite"/>
-                            </path>
-                        </g>
+    <div id = "loadingInfo" class="hidden" style='margin:0;position:fixed;top:30px;left:50%;margin-right:-50%;transform:translate(-50%);text-align:center; background-color: white; border:1px solid rgb(194, 194, 194);border-radius:10px;box-shadow: 0px 0px 10px rgb(0 0 0 / 0.4)'>
+        <div style="padding:30px;">
+            <svg width="38" viewBox="0 0 42 42">
+                <defs>
+                    <linearGradient x1="8.042%" y1="0%" y2="100%" id="a">
+                        <stop stop-color="#000" stop-opacity="0" offset="0%"/>
+                        <stop stop-color="#000" stop-opacity=".231" offset="63.146%"/>
+                        <stop stop-color="#000" offset="100%"/>
+                    </linearGradient>
+                </defs>
+                <g fill="none" fill-rule="evenodd">
+                    <g transform="translate(1 1)">
+                        <path d="M36 20c0-9.94-8.06-20-20-20" stroke="url(#a)" stroke-width="6">
+                            <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="0.5s" repeatCount="indefinite"/>
+                        </path>
                     </g>
-                </svg>
-            </div>
-            <div style='color:grey;'>
-                Loading Information
-            </div>
-        </div> 
+                </g>
+            </svg>
+        </div>
+        <div id="loadingInfoText" style='color:rgb(107, 107, 107); padding-bottom:30;padding-left:60;padding-right:60;font-size:11pt;'>
+            Loading...
+        </div>
     </div>
+    
 
     <div id="reviewPane" style="display:none;width:100%;height:100%">
         <div style='width:100%;'>
@@ -42,8 +41,8 @@
                 <thead id='tableHead'>
                     <tr>
                         <th class="header" style="width:20%">Modules</th>
-                        <th class="header" style="width:60%"></th>
-                        <th class="header" style="width:20%">Details</th>
+                        <th class="header" style="width:50%"></th>
+                        <th class="header" style="width:30%">Details</th>
                     </tr>
                 </thead>
             </table>
@@ -51,9 +50,26 @@
                 <table style='table-layout:fixed;width:100%;font-size:10pt;'>
                     <tbody id='tableBody'>
                         <tr style="vertical-align: top;">
-                            <td id="moduleListContainer"></td>
-                            <td id="contentViewContainer"><div id='reviewContainer' style="width:100%;"></div></td>
-                            <td id="attributeViewContainer"></td>
+                            <td id="leftPane"></td>
+                            <td id="centerPane"><div id='reviewContainer' style="width:100%;"></div></td>
+                            <td id="rightPane">
+                                <div>
+                                    <div id='btnPrevChange' style='margin:4px;float:left;'>
+                                        <svg onclick='prevChange()' width='26' class='svgButton' viewBox='0 0 32 32'>
+                                            <title>Navigate to the previous change.</title>
+                                            <polygon points="16,2.001 16,10 30,10 30,22 16,22 16,30 2,16"/>
+                                        </svg>
+                                    </div>
+                                    <div id='btnNextChange' style='margin:4px;float:right;'>
+                                        <svg onclick='nextChange()' width='26' class='svgButton' viewBox='0 0 32 32'>
+                                            <title>Navigate to the next change.</title>
+                                            <polygon points="16,2.001 16,10 2,10 2,22 16,22 16,30 30,16"/>
+                                        </svg>
+                                    </div>
+                                </div>
+                                <div id="artifactPaneTitle" class="header2">&nbsp;</div>
+                                <div id="artifactPane" style="padding:10px;"></div>
+                            </td>
                         </tr>
                     </tbody>
                 </table>

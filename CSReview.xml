@@ -9,10 +9,12 @@
     <html>
         <head>
             <link rel="stylesheet" href="css/CSReview.css"/>
+            <link rel="stylesheet" href="css/widgets.css"/>
             <link rel="import" href="CSReview.html"/>
             <script src="scripts/jquery-3.3.1.js"></script>
             <script src="scripts/common.js"></script>
             <script src="scripts/CSReview.js"></script>
+            <script src="scripts/htmlDiff.js"></script>
             <script>
                 function initialize(){
                     $('#root').load('CSReview.html');

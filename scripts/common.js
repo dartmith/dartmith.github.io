@@ -698,7 +698,7 @@ function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false){
                     }
                 }
             }
-            rows["RESTurl"] = RESTurl;
+            rows.RESTurl = RESTurl;
             if (returnFunction!=null){
 				returnFunction(rows);
 			}
@@ -937,7 +937,7 @@ function objParseChildNodes(element, removePrefixes=false){
         if (element.attributes.length>0){
             for (var attr of element.attributes){
             	if (removePrefixes){
-            		returnObj[rPrefix(attr.name)] = attr.value;
+                    returnObj[rPrefix(attr.name)] = attr.value;
             	} else {
             		returnObj[attr.name] = attr.value;
             	}
@@ -946,12 +946,23 @@ function objParseChildNodes(element, removePrefixes=false){
     }
     if (element.hasChildNodes()){
         if ((element.firstChild.nodeName=="#text") && (element.childNodes.length==1)){
-            returnObj = element.firstChild.textContent;
+        	if (element.prefix=="rm_property"){
+                returnObj.attributeId = element.localName;
+                returnObj.text = element.firstChild.textContent;
+        	} else {
+        		returnObj = element.firstChild.textContent;
+        	}
+            
         } else {
+        	var curArtifactAttributeId = "";
             var curName;
             for (var childNode of element.childNodes){
             	if (removePrefixes){
                     curName = rPrefix(childNode.nodeName);
+                    if (curName.indexOf("PROPERTY:")==0){
+                        curArtifactAttributeId = curName.substr(9);
+                        curName = "artifactAttributes";
+                    }
             	} else {
             		curName = childNode.nodeName;
             	}
@@ -968,15 +979,22 @@ function objParseChildNodes(element, removePrefixes=false){
                 	returnObj["primaryText"] = childNode.innerHTML;
                 } else  if (processMe){
                     curValue = objParseChildNodes(childNode, removePrefixes);
-                    if (returnObj[curName]==null){
-                        returnObj[curName] = curValue;
-                    } else {
-                        if (!(returnObj[curName].constructor===Array)){
-                            var temp = returnObj[curName];
-                            returnObj[curName] = [];
-                            returnObj[curName].push(temp);
-                        }
+                    if ((returnObj[curName]!=null)||(curName=="artifactAttributes")){
+                    	if (curName=="artifactAttributes"){
+                    		curValue.attributeId = curArtifactAttributeId;
+                    	}
+                    	if (!(returnObj[curName])){
+                    		returnObj[curName] = [];
+                    	} else {
+                    		if (!(returnObj[curName].constructor===Array)){
+								var temp = returnObj[curName];
+								returnObj[curName] = [];
+								returnObj[curName].push(temp);
+							}
+                    	}
                         returnObj[curName].push(curValue);
+                    } else {
+                        returnObj[curName] = curValue;
                     }
                 }
             }
@@ -991,10 +1009,14 @@ function objParseChildNodes(element, removePrefixes=false){
 
 function rPrefix(i){
 	var sRng = i.indexOf(":");
-	if (sRng > 0){
-		return i.substr(sRng+1);
+	if (i.indexOf("rm_property:")!=-1){
+        return "PROPERTY:" + i.substr(sRng+1);
 	} else {
-		return i;
+		if (sRng > 0){
+			return i.substr(sRng+1);
+		} else {
+			return i;
+		}
 	}
 }
 
