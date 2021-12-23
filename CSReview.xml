@@ -17,7 +17,7 @@
             <script src="scripts/htmlDiff.js"></script>
             <script>
                 function initialize(){
-                    $('#root').load('CSReview.html');
+                    $('#root').load('CSReview.html', hideLoader);
                 }
             </script>
         </head>

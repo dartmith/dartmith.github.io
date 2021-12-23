@@ -656,9 +656,10 @@ function getCurrentUser(returnFunction){
     });
 }
 
-function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false){
+function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false, passedData=null){
     var isAsync = true;
 	var rows;
+
 	if (returnFunction == null) {
 		isAsync=false;
 	}
@@ -699,6 +700,7 @@ function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false){
                 }
             }
             rows.RESTurl = RESTurl;
+            rows.passedData = passedData;
             if (returnFunction!=null){
 				returnFunction(rows);
 			}
@@ -716,10 +718,15 @@ function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false){
 
 function getOSLC(OSLCurl, returnFunction){
     //OSLCurl = proxyURL(OSLCurl);
-    var rows;
+    var isAsync = true;
+	var rows;
+
+	if (returnFunction == null) {
+		isAsync=false;
+	}
     $.ajax({
         url: OSLCurl,
-        async:false,
+        async:isAsync,
         headers:{
         'Accept' : 'application/rdf+xml',
         'OSLC-Core-Version' : '2.0'

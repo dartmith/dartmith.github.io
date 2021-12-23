@@ -1,16 +1,40 @@
 <div id="main">
     <div id="workItemContainer" hidden="true">
         <div id="workItemForm">
-            <h1>Enter Work Item # To Get Started</h1>
-            <div id="workItemInputContainer">
-                <input id="workItemInput" pattern="[0-9]+" type="search" placeholder="Work Item ID" />
-                <button id="workItemInputSearchButton" type="submit" onclick="onSearchPressed()">Search</button>
+            <div>
+                <div id="mainIcon">
+                    <img src="images/CSReviewIcon.svg" width="100">
+                </div>
+                <div id="mainTitle">
+                    <h1>Change Set Review Tool</h1>
+                </div>
             </div>
-            <div id="workItemInputError"></div>
-            <div id="changeSetReviewItems"></div>
+            <div id="wiEntrySection">
+                <div id="workItemInputContainer">
+                    <input id="workItemInput" incremental onsearch="idEntered()" pattern="[0-9]+" type="search" placeholder="Work Item Id" autocomplete="off"/>
+                </div>
+                <div class="hidden" style="position:absolute;" id="workItemInputError">Work Item Not Found</div>
+                <div id="wiInfoSection" class="hidden">
+                    <div class="titleHeader" id="searchWiInfo"></div>
+                    <div>
+                        <div class="panel">
+                            <div class="panelTitle">
+                                Open Change Sets
+                            </div>
+                            <div id="changeSetReviewItems" class="panelContent"></div>
+                        </div>
+                        <div class="panel">
+                            <div class="panelTitle">
+                                Delivered Change Sets
+                            </div>
+                            <div id="changeSetDeliveredItems" class="panelContent"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    <div id = "loadingInfo" class="hidden" style='margin:0;position:fixed;top:30px;left:50%;margin-right:-50%;transform:translate(-50%);text-align:center; background-color: white; border:1px solid rgb(194, 194, 194);border-radius:10px;box-shadow: 0px 0px 10px rgb(0 0 0 / 0.4)'>
+    <div id = "loadingInfo" style='margin:0;position:fixed;top:30px;left:50%;margin-right:-50%;transform:translate(-50%);text-align:center; background-color: white; border:1px solid rgb(194, 194, 194);border-radius:10px;box-shadow: 0px 0px 10px rgb(0 0 0 / 0.4)'>
         <div style="padding:30px;">
             <svg width="38" viewBox="0 0 42 42">
                 <defs>
@@ -50,7 +74,66 @@
                 <table style='table-layout:fixed;width:100%;font-size:10pt;'>
                     <tbody id='tableBody'>
                         <tr style="vertical-align: top;">
-                            <td id="leftPane"></td>
+                            <td id="leftPane">
+
+                                <div id='btnMenu' style='position:absolute;top:6px;left:6px;'>
+                                    <svg onclick='toggleMenu()' width='26' class='svgButton' viewBox='0 0 26 26'>
+                                        <title>Review Menu</title>
+                                        <rect height="4" width="18" x="4" y="5"/>
+                                        <rect height="4" width="18" x="4" y="11"/>
+                                        <rect height="4" width="18" x="4" y="17"/>
+                                    </svg>
+                                </div>
+                                <div class="titleHeader">Change Set Review</div>
+                                <div id="reviewMenu" class="hidden menu">
+                                    <div class="svgButton largeButton" onclick='startNewReview()'>
+                                        <div style="float:left">
+                                            <svg width='26' viewBox='0 0 54 54'>
+                                                <path d="M31 28h-1.59l-.55-.55C30.82 25.18 32 22.23 32 19c0-7.18-5.82-13-13-13S6 11.82 6 19s5.82 13 13 13c3.23 0 6.18-1.18 8.45-3.13l.55.55V31l10 9.98L40.98 38 31 28zm-12 0c-4.97 0-9-4.03-9-9s4.03-9 9-9 9 4.03 9 9-4.03 9-9 9z"/>
+                                                <path d="M0 0h48v48H0z" fill="none"/>
+                                            </svg>
+                                        </div>
+                                        <div>Start New Review</div>
+                                    </div>
+                                    <div class="svgButton largeButton" onclick='finishReview()'>
+                                        <div style="float:left">
+                                            <svg width='26' viewBox='0 0 26 26'>
+                                                <path d="M4.9,7.1 L3.5,8.5 L8,13 L18,3 L16.6,1.6 L8,10.2 L4.9,7.1 L4.9,7.1 Z M16,16 L2,16 L2,2 L12,2 L12,0 L2,0 C0.9,0 0,0.9 0,2 L0,16 C0,17.1 0.9,18 2,18 L16,18 C17.1,18 18,17.1 18,16 L18,8 L16,8 L16,16 L16,16 Z"/>
+                                            </svg>
+                                        </div>
+                                        <div style="padding-left:10px;">Finished Reviewing</div>
+                                    </div>
+                                    <div class="informationBar">
+                                        If changes are made after your review is marked as done, your review will be marked as incomplete.<br><br>To close the review, verify the review is complete and then deliver the change set.
+                                    </div>
+                                    <div class="titleHeader">Review Status</div>
+                                    <div style="padding:10px;">
+                                        <div class="panel">
+                                            <div class="panelTitle">
+                                                Comments
+                                            </div>
+                                            <div id="prCommentsInfo" class="panelContent">
+                                                X Unresolved Comments<br>
+                                                X Resolved Comments<br>
+                                                X Total Comments
+                                            </div>
+                                        </div>
+                                        <div class="panel">
+                                            <div class="panelTitle">
+                                                Reviewers
+                                            </div>
+                                            <div id="prReviewersInfo" class="panelContent">
+                                                Dave - Review Finished<br>
+                                                Bob - Reviewed changes up to 2021-12-21X Total Comments
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="smallHeader" id="wiInfo">&nbsp;</div>
+                                <div class="smallHeader" id="csInfo">&nbsp;</div>
+                                <div id="moduleList"></div>
+                            </td>
                             <td id="centerPane"><div id='reviewContainer' style="width:100%;"></div></td>
                             <td id="rightPane">
                                 <div>
@@ -67,8 +150,8 @@
                                         </svg>
                                     </div>
                                 </div>
-                                <div id="artifactPaneTitle" class="header2">&nbsp;</div>
-                                <div id="artifactPane" style="padding:10px;"></div>
+                                <div id="artifactPaneTitle" class="titleHeader">&nbsp;</div>
+                                <div id="artifactPane" style="padding:10px;overflow-y:auto;"></div>
                             </td>
                         </tr>
                     </tbody>
