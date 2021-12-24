@@ -5,7 +5,6 @@ curSelection.ModuleId = "";
 curSelection.ArtifactId = "";
 var gChangedArtIDs;
 var gChangedModules;
-var gTypesReturned = false;
 var gArtifacts = new Object();
 var gAttributeNames = new Object();
 var gRMEnumNames = new Object();
@@ -16,8 +15,13 @@ var gArtifactsRequested = false;
 var pendingRequests = 0;
 var gCancelInitialNext = false;
 var curChangeSet = "";
+var curChangeSetName = "";
 var gLatestChange = "";
-var gWIId = "";//This is used to track approvals. When approving, a comment is added to a work item stating that you approve changes up until this date.
+var gMyUserId = "";
+var gShowNewChangesOnly = false;
+var gWIId = ""; //This is used to track approvals. When approving, a comment is added to a work item stating that you approve changes up until this date.
+
+var gReviewerInfo = new Object();
 
 function startNewReview(){
     toggleMenu();
@@ -26,9 +30,8 @@ function startNewReview(){
     curSelection = new Object();
     curSelection.ModuleId = "";
     curSelection.ArtifactId = "";
-    gChangedArtIDs;
-    gChangedModules;
-    gTypesReturned = false;
+    gChangedArtIDs = null;
+    gChangedModules = null;
     gArtifacts = new Object();
     gAttributeNames = new Object();
     gRMEnumNames = new Object();
@@ -38,8 +41,10 @@ function startNewReview(){
     pendingRequests = 0;
     gCancelInitialNext = false;
     curChangeSet = "";
+    curChangeSetName = "";
     gLatestChange = "";
-    
+    gShowNewChangesOnly = false;
+    gReviewerInfo = new Object();
 
     
     $('#reviewPane').hide();
@@ -356,6 +361,14 @@ function populateArtifactRow(response) {
         if (aLastModified> gLatestChange){
             gLatestChange = aLastModified;
         }
+        var userIds = Object.keys(gReviewerInfo);
+        for (var userId of userIds){
+        	if (aLastModified > gReviewerInfo[userId].lastModified){
+        		if (gReviewerInfo[userId].artifactsNotReviewed.indexOf("m" + modId + "a" + a.identifier)==-1){
+        			gReviewerInfo[userId].artifactsNotReviewed.push("m" + modId + "a" + a.identifier);
+        		}
+        	}
+        }
     }
     if (response.RESTurl.indexOf("vvc.configuration") != -1) {
         fromChangeset = true;
@@ -396,8 +409,46 @@ function populateArtifactRow(response) {
             loadArtifactsInBackground();
         }
         endLoading(modId);
+        var allModulesLoaded = true;
+        for (var key of Object.keys(gModules)){
+        	if (gModules[key].pendingRequests > 0 ){
+        		allModulesLoaded = false;
+        	}
+        }
+        if (allModulesLoaded){
+        	populateReviewerInfo();
+        }
         resized();
     }
+}
+
+function populateReviewerInfo(){
+	var iDiv = document.getElementById("prReviewersInfo");
+	for (var userId of Object.keys(gReviewerInfo)){
+		var pc = 1;
+		if (gReviewerInfo[userId].artifactsNotReviewed.length>0){
+            pc = 1 - (gReviewerInfo[userId].artifactsNotReviewed.length/gChangedArtIDs.length);
+            if (pc > 0.99){
+            	pc = 0.99; //Ensure that someone with artifacts not reviewed gets a 99%.
+            }
+		}
+        pc = Math.round(pc*100);
+		iDiv.innerHTML += gReviewerInfo[userId].userName + " - " + pc + "% Complete";
+	}
+	if (gReviewerInfo[gMyUserId]){
+		var artsToReview = gReviewerInfo[gMyUserId].artifactsNotReviewed;
+		if (artsToReview.length == 0){
+			alert("There are no artifact changes since you last marked this review as complete. If you are expecting additional fixes, you'll have wait a little longer.");
+            showReviewAsFinished();
+		} else {
+			if (confirm(artsToReview.length + " artifacts were modified since you reviewed this.\n\nPress 'OK' to update the next/previous buttons to navigate *only* between the new changes.\n\nMark your review as complete when you are finished again.")){
+			    gShowNewChangesOnly = true;
+			    gCurrentArtIndex = 0;
+			    nextChange();
+			}
+		}
+	}
+
 }
 
 function trimOuterDiv(text) {
@@ -410,19 +461,58 @@ function removeOuterPTag(text) {
 }
 
 const navigateToReview = (event, changeSetInfo)=>{
-    //do a loading indicator
     showLoader();
     event.preventDefault();
-    document.getElementById("csInfo").innerHTML = changeSetInfo["dcterms:title"];
     curChangeSet = changeSetInfo["rdf:about"];
+    curChangeSetName = changeSetInfo["dcterms:title"];
+    document.getElementById("csInfo").innerHTML = curChangeSetName;
+    
     var projectUrl = changeSetInfo["process:projectArea"]["rdf:resource"];
     var componentUrl = changeSetInfo["oslc_config:component"]["rdf:resource"];
-
+    pendingRequests = 3;
     initArtifactAttributes(projectUrl, componentUrl, curChangeSet);
-    const url = 'https://maximus:9443/rm/publish/diff?sourceConfigUri=' + encodeURIComponent(curChangeSet) + '&targetConfigUri=' + encodeURIComponent(changeSetInfo["oslc_config:overrides"]["rdf:resource"]);
-    gChangedArtIDs = null;
+    var url = 'https://maximus:9443/rm/publish/diff?sourceConfigUri=' + encodeURIComponent(curChangeSet) + '&targetConfigUri=' + encodeURIComponent(changeSetInfo["oslc_config:overrides"]["rdf:resource"]);
     getREST(url, processComparisonData, false, true);
     //const schemaData = getREST('https://maximus:9443/rm/publish/comparisons?metadata=schema');
+    url = RTCURL() + 'rpt/repository/workitem?fields=workitem/workItem[id=' + gWIId + ']/(id|comments/(formattedContent|creator/(name|userId)))';
+    getREST(url, loadReviewerInfo);
+}
+
+function loadReviewerInfo(response){
+    if (response[0].comments){
+    	var comments = response[0].comments
+		for (var c of comments){
+			var cT = c.formattedContent;
+			//Switch to JSON Parsing if this gets more complicated.
+			var lModMarker = "https://review.info?lastModified=&quot;";
+			if (cT.indexOf(lModMarker)!=-1){
+				var userInfo = new Object();
+				userInfo.userName = c.creator.name;
+				userInfo.userId = c.creator.userId;
+				userInfo.artifactsNotReviewed = [];
+				var lModText = cT.substr(cT.indexOf(lModMarker) + lModMarker.length);
+				userInfo.lastModified = lModText.substr(0, lModText.indexOf("&quot;"));
+				if (gReviewerInfo[userInfo.userId]){
+					if (userInfo.lastModified > gReviewerInfo[userInfo.userId].lastModified){
+						gReviewerInfo[userInfo.userId].lastModified = userInfo.lastModified;
+					}
+				} else {
+					gReviewerInfo[userInfo.userId] = userInfo;
+				}
+			}
+		}
+    }
+    pendingRequests--;
+    if (pendingRequests==0) {
+        showReview();
+    }
+    if (gMyUserId==""){
+    	getCurrentUser(setMyUserId);
+    }
+}
+
+function setMyUserId(r){
+	gMyUserId = r;
 }
 
 function processComparisonData(comparisonData) {
@@ -452,13 +542,13 @@ function processComparisonData(comparisonData) {
             console.log("Unprocessed Items Present in comparisonData");
         }
     }
-    if (gTypesReturned) {
+    pendingRequests--;
+    if (pendingRequests==0) {
         showReview();
     }
 }
 
 function initArtifactAttributes(projectUrl, componentUrl, changeSetUrl) {
-    gTypesReturned = false;
     var projId = getLastPartofUrl(projectUrl);
     var compId = getLastPartofUrl(componentUrl);
     var contextUrl = "https://maximus:9443/rm/rm-projects/" + projId + "/components/" + compId;
@@ -500,8 +590,8 @@ function processTypesResponse(response) {
             }
         }
     }
-    gTypesReturned = true
-    if (gChangedArtIDs) {
+    pendingRequests--;
+    if (pendingRequests==0) {
         showReview();
     }
 }
@@ -788,9 +878,19 @@ function nextChange() {
     var nextFound = false;
     for (i = gCurrentArtIndex; i<gOrderedArtifacts.length; i++){
         if (gOrderedArtifacts[i].isChanged){
-            nextFound = true;
-            gCurrentArtIndex = i;
-            break;
+        	if (gShowNewChangesOnly){
+        		var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+                if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) != -1){
+                	nextFound = true;
+					gCurrentArtIndex = i;
+					break;
+                }
+        	} else {
+                nextFound = true;
+				gCurrentArtIndex = i;
+				break;
+        	}
+            
         }
     }
     if (!nextFound){
@@ -798,8 +898,17 @@ function nextChange() {
         gCurrentArtIndex = 0;//Start from beginning if none found after.
         for (i = gCurrentArtIndex; i<gOrderedArtifacts.length; i++){
             if (gOrderedArtifacts[i].isChanged){
-                gCurrentArtIndex = i;
-                break;
+            	if (gShowNewChangesOnly){
+					var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+					if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) != -1){
+						gCurrentArtIndex = i;
+						break;
+					}
+				} else {
+                    gCurrentArtIndex = i;
+                    break;
+				}
+                
             }
         }
     }
@@ -811,9 +920,18 @@ function prevChange() {
     var prevFound = false;
     for (i = gCurrentArtIndex; i >= 0; i--){
         if (gOrderedArtifacts[i].isChanged){
-            prevFound = true;
-            gCurrentArtIndex = i;
-            break;
+        	if (gShowNewChangesOnly){
+        		var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+                if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) !=-1) {
+                	prevFound = true;
+					gCurrentArtIndex = i;
+					break;
+                }
+        	} else {
+        		prevFound = true;
+				gCurrentArtIndex = i;
+				break;
+        	}
         }
     }
     if (!prevFound){
@@ -821,8 +939,16 @@ function prevChange() {
         gCurrentArtIndex = gOrderedArtifacts.length-1;//Start from end if none found before.
         for (i = gCurrentArtIndex; i >= 0; i--){
             if (gOrderedArtifacts[i].isChanged){
-                gCurrentArtIndex = i;
-                break;
+            	if (gShowNewChangesOnly){
+					var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+					if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) != -1){
+						gCurrentArtIndex = i;
+						break;
+					}
+				} else {
+					gCurrentArtIndex = i;
+					break;
+				}
             }
         }
     }
@@ -860,5 +986,76 @@ function setSelArtifact() {
 }
 
 function finishReview(){
-    alert("Latest Modified: " + gLatestChange);
+    var bText = document.getElementById("btnFinishedReviewingText");
+    if (bText.innerHTML == "Finished Reviewing") {
+        if (confirm("This can't be undone!\nPress 'OK' to mark your review as complete.\nPress 'Cancel' to continue reviewing.\n\nNote: You'll still be able to add new review comments. Also, your review status will be reset if new changes are made in this change set.")){
+            var CSLink = "<a href='" + curChangeSet + "'>" + curChangeSetName + "</a>";
+            bText.innerHTML = "Updating Review..."
+            //Normal methods of hiding html elements were stripped by EWM. Resorted to making an a with no text and it works!
+            var hiddenInfo = "<a href='https://review.info?lastModified=\"" + gLatestChange + "\"'></a>";
+            if (gReviewerInfo[gMyUserId]){
+                addWIComment("Reviewed " + gReviewerInfo[gMyUserId].artifactsNotReviewed.length + " additional changes to " + CSLink + "." + hiddenInfo);
+            } else {
+            	addWIComment("Done reviewing " + CSLink + "." + hiddenInfo);
+            }
+            
+        }
+    } 
+}
+
+function showReviewAsFinished(){
+    var btnFinished = document.getElementById("btnFinishedReviewing");
+    btnFinished.style = "fill:green;background-color:#d7ffd7";
+    btnFinished.classList.remove("svgButton");
+    document.getElementById("btnFinishedReviewingText").innerHTML = "Review Finished";
+}
+
+function addWIComment(cText){
+	var WIId = gWIId;
+	var commentText = cText;
+	if (commentText!=''){
+		newJSON = new Object();
+		newJSON['dcterms:description'] = commentText;
+		
+		var str = JSON.stringify(newJSON);
+		var URL = RTCURL() + "oslc/workitems/" + WIId + "/rtc_cm:comments/oslc:comment";
+
+		$.ajax({
+			async:true,	xhrFields: {withCredentials: true},	url: URL,
+			type: 'POST',
+			data: str,
+			timeout:5000,
+			headers:{
+			'Content-Type' : 'application/json',
+			'Accept':'application/json',
+			'OSLC-Core-Version' : '2.0'
+			},
+			success: function(responst){
+			    showReviewAsFinished();
+			},
+			error: function(error){
+				if (error.statusText=="timeout"){
+					var message = "Woops! Saving work item " + WIId + " timed out.\nYour session has expired.\nPlease refresh the page to login again.";
+				} else {
+					var message = "Woops! Saving work item " + WIId + " failed.\n";
+				}
+				if (error.responseJSON!=null){
+					if (error.responseJSON['oslc_cm:message']!=null){
+						var errorString = error.responseJSON['oslc_cm:message'] + "\n";
+						if (errorString.indexOf('CRJAZ')>-1){
+							errorString = errorString.substr(errorString.indexOf(" ") + 1);
+						}
+						if (errorString.indexOf('(work item')>-1){
+							errorString = errorString.substr(0, errorString.indexOf(' (work item')) + ".\n";
+						}
+						errorString = errorString.replace("'Save Work Item' failed. Preconditions have not been met: ", "");
+						errorString = errorString.replace("needs to be set", "is required in this state");
+						message += errorString;
+					}
+				}
+				document.getElementById("btnFinishedReviewingText").innerHTML = "Finished Reviewing";
+				alert(message);
+			}
+		});
+	}
 }

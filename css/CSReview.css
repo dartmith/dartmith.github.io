@@ -69,10 +69,9 @@ padding: 5px;
 #centerPane {width:50%;overflow-y:auto;height:100%;scroll-behavior: smooth;}
 #rightPane {width:30%;height:100%;}
 .Menu{
-    width:calc(20% - 20px);
+    width: 20%;
     background-color:white;
     position:absolute;
-    padding:10px;
     height:100%;
 }
 

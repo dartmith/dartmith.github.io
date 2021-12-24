@@ -706,7 +706,7 @@ function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false, passedDa
 			}
         },
         error:function(error){
-            console.error(error);
+            console.log(error);
             alert('Your session has expired.\nPlease refresh this page to login.');
         }
     });
@@ -717,7 +717,7 @@ function getREST(RESTurl, returnFunction, isJSON, removePrefixes=false, passedDa
 
 
 function getOSLC(OSLCurl, returnFunction){
-    //OSLCurl = proxyURL(OSLCurl);
+    OSLCurl = proxyURL(OSLCurl);
     var isAsync = true;
 	var rows;
 

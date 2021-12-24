@@ -86,46 +86,43 @@
                                 </div>
                                 <div class="titleHeader">Change Set Review</div>
                                 <div id="reviewMenu" class="hidden menu">
-                                    <div class="svgButton largeButton" onclick='startNewReview()'>
-                                        <div style="float:left">
-                                            <svg width='26' viewBox='0 0 54 54'>
-                                                <path d="M31 28h-1.59l-.55-.55C30.82 25.18 32 22.23 32 19c0-7.18-5.82-13-13-13S6 11.82 6 19s5.82 13 13 13c3.23 0 6.18-1.18 8.45-3.13l.55.55V31l10 9.98L40.98 38 31 28zm-12 0c-4.97 0-9-4.03-9-9s4.03-9 9-9 9 4.03 9 9-4.03 9-9 9z"/>
-                                                <path d="M0 0h48v48H0z" fill="none"/>
-                                            </svg>
+                                    <div style="padding:0 10;">
+                                        <div class="svgButton largeButton" onclick='startNewReview()'>
+                                            <div style="float:left">
+                                                <svg width='26' viewBox='0 0 54 54'>
+                                                    <path d="M31 28h-1.59l-.55-.55C30.82 25.18 32 22.23 32 19c0-7.18-5.82-13-13-13S6 11.82 6 19s5.82 13 13 13c3.23 0 6.18-1.18 8.45-3.13l.55.55V31l10 9.98L40.98 38 31 28zm-12 0c-4.97 0-9-4.03-9-9s4.03-9 9-9 9 4.03 9 9-4.03 9-9 9z"/>
+                                                    <path d="M0 0h48v48H0z" fill="none"/>
+                                                </svg>
+                                            </div>
+                                            <div>Start New Review</div>
                                         </div>
-                                        <div>Start New Review</div>
-                                    </div>
-                                    <div class="svgButton largeButton" onclick='finishReview()'>
-                                        <div style="float:left">
-                                            <svg width='26' viewBox='0 0 26 26'>
-                                                <path d="M4.9,7.1 L3.5,8.5 L8,13 L18,3 L16.6,1.6 L8,10.2 L4.9,7.1 L4.9,7.1 Z M16,16 L2,16 L2,2 L12,2 L12,0 L2,0 C0.9,0 0,0.9 0,2 L0,16 C0,17.1 0.9,18 2,18 L16,18 C17.1,18 18,17.1 18,16 L18,8 L16,8 L16,16 L16,16 Z"/>
-                                            </svg>
+                                        <div id="btnFinishedReviewing" class="svgButton largeButton" onclick='finishReview()' title="If changes are made after your review is marked as done, &#013;your review will be marked as incomplete.&#013;&#013;To close the review, verify the review is complete &#013;and then deliver the change set.">
+                                            <div style="float:left">
+                                                <svg width='26' viewBox='0 0 26 26'>
+                                                    <path d="M4.9,7.1 L3.5,8.5 L8,13 L18,3 L16.6,1.6 L8,10.2 L4.9,7.1 L4.9,7.1 Z M16,16 L2,16 L2,2 L12,2 L12,0 L2,0 C0.9,0 0,0.9 0,2 L0,16 C0,17.1 0.9,18 2,18 L16,18 C17.1,18 18,17.1 18,16 L18,8 L16,8 L16,16 L16,16 Z"/>
+                                                </svg>
+                                            </div>
+                                            <div id="btnFinishedReviewingText" style="padding-left:10px;">Finished Reviewing</div>
                                         </div>
-                                        <div style="padding-left:10px;">Finished Reviewing</div>
                                     </div>
-                                    <div class="informationBar">
-                                        If changes are made after your review is marked as done, your review will be marked as incomplete.<br><br>To close the review, verify the review is complete and then deliver the change set.
-                                    </div>
-                                    <div class="titleHeader">Review Status</div>
-                                    <div style="padding:10px;">
+                                    
+                                    <div class="titleHeader" style="margin-top:20px;margin-bottom:5px;">Review Status</div>
+                                    <div style="padding:0 10;">
                                         <div class="panel">
                                             <div class="panelTitle">
                                                 Comments
                                             </div>
                                             <div id="prCommentsInfo" class="panelContent">
-                                                X Unresolved Comments<br>
-                                                X Resolved Comments<br>
-                                                X Total Comments
+                                                5 Unresolved<br>
+                                                4 Resolved<br>
+                                                9 Total
                                             </div>
                                         </div>
                                         <div class="panel">
                                             <div class="panelTitle">
                                                 Reviewers
                                             </div>
-                                            <div id="prReviewersInfo" class="panelContent">
-                                                Dave - Review Finished<br>
-                                                Bob - Reviewed changes up to 2021-12-21X Total Comments
-                                            </div>
+                                            <div id="prReviewersInfo" class="panelContent"></div>
                                         </div>
                                     </div>
                                 </div>
