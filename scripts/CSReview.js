@@ -134,7 +134,7 @@ function clickArtifact(e) {
     var numChangedDone = 0;
     var totChanged = 0;
     for (i=0;i<gOrderedArtifacts.length;i++){
-        if (gOrderedArtifacts[i].isChanged){
+        if (gOrderedArtifacts[i].isChangedOrMoved){
            totChanged++ 
         }
         if (gOrderedArtifacts[i].ModuleId==modId){
@@ -156,41 +156,85 @@ function clickArtifact(e) {
     var attrChangeInfo = "";
     var changeSummary = "";
     var newArtifact = false;
+    var artId = curSelection.ArtifactId;
+    var showComments = true;
+    artId = artId.substr(artId.indexOf("a") + 1);
     if (eClassList.contains("changed")) {
-        var streamText = a.primaryText;
-        var changedArt = gArtifacts["m" + curSelection.ModuleId + "cs" + id][0];
-        var csText = changedArt.primaryText;
-        if (csText != streamText) {
-            changeSummary += "Primary text";
-            textChangeInfo = "Text in stream:" + newTextArea(streamText) + "Text in change set:" + newTextArea(csText);
-        }
-        if (changedArt.artifactAttributes) {
-            for (var cAtt of changedArt.artifactAttributes) {
-                var newVal = cAtt.value;
-                var oldVal = "";
-                if (a.artifactAttributes) {
-                    for (var aAtt of a.artifactAttributes) {
-                        if (aAtt.name == cAtt.name) {
-                            oldVal = aAtt.value;
-                        }
-                    }
-                }
-                if (newVal != oldVal) {
-                    attrChangeInfo += "<div>" + cAtt.name + ": <ins>" + cAtt.value + "</ins><del>" + oldVal + "</del></div>";
-                }
-            }
-            if (attrChangeInfo == "") {
-                attrChangeInfo = "None";
-            } else {
-                if (changeSummary == "") {
-                    changeSummary = "Attribute values";
-                } else {
-                    changeSummary += " and attribute values";
-                }
-            }
-        }
-        changeSummary += " changed."
+    	var modArt;
+		for (var cArt of gModules[modId].artifacts){
+			if (cArt.id == artId){
+				modArt = cArt;
+			}
+		}
+        
+    	if (modArt.isChanged){
+			var streamText = a.primaryText;
+			var changedArt = gArtifacts["m" + curSelection.ModuleId + "cs" + id][0];
+			var csText = changedArt.primaryText;
+			if (csText != streamText) {
+				changeSummary += "Primary text";
+				textChangeInfo = "Text in stream:" + newTextArea(streamText) + "Text in change set:" + newTextArea(csText);
+			}
+			if (changedArt.artifactAttributes) {
+				for (var cAtt of changedArt.artifactAttributes) {
+					var newVal = cAtt.value;
+					var oldVal = "";
+					if (a.artifactAttributes) {
+						for (var aAtt of a.artifactAttributes) {
+							if (aAtt.name == cAtt.name) {
+								oldVal = aAtt.value;
+							}
+						}
+					}
+					if (newVal != oldVal) {
+						attrChangeInfo += "<div>" + cAtt.name + ": <ins>" + cAtt.value + "</ins><del>" + oldVal + "</del></div>";
+					}
+				}
+				if (attrChangeInfo == "") {
+					attrChangeInfo = "None";
+				} else {
+					if (changeSummary == "") {
+						changeSummary = "Attributes ";
+					} else {
+						changeSummary += " and attributes ";
+					}
+				}
+			}
+			if (changeSummary==""){
+                changeSummary += "No differences found. This can happen if the author undoes a change, or another change set with the same changes are delivered to the stream. Only the 'Modified Date' will be changed.";
+			} else {
+				changeSummary += " changed.";
+			}
+			
+			
+    	}
 
+    	if (modArt.isMoved){
+    		if (modArt.movedClumpLength > 1){
+    			if (modArt.movedClumpLength==2){
+                    changeSummary += "This and the next artifact were ";
+    			} else {
+    				changeSummary += "This and the next " + (modArt.movedClumpLength - 1) + " artifacts were ";
+    			}
+    			
+    		} else {
+    			changeSummary += "This artifact was ";
+    		}
+    		if (changeSummary!=""){
+                changeSummary += " ";
+    		}
+    		changeSummary += " moved ";
+    		if (modArt.movedBy > 0){
+                changeSummary += "up by " + modArt.movedBy;
+    		} else {
+    			changeSummary += "down by " + -1 * modArt.movedBy;
+    		}
+    		if (modArt.movedClumpHasNewOrDeleted){
+				changeSummary += " (ignores added and removed artifacts)."
+			} else {
+				changeSummary += "."
+			}
+		}
     } else if (eClassList.contains("added")) {
         newArtifact = true;
         if (gArtifacts["m" + modId + "cs" + id]) {
@@ -203,8 +247,10 @@ function clickArtifact(e) {
     } else if (eClassList.contains("deleted")) {
         changeSummary = "Artifact removed.";
     } else {
+    	showComments = false;
         changeSummary = "No changes to this artifact.";
     }
+    
 
     var nDiv = document.createElement("div");
     nDiv.innerHTML = changeSummary
@@ -231,6 +277,13 @@ function clickArtifact(e) {
     } else {
         v.appendChild(newPanel("Attributes in Stream", sAttrs));
     }
+    if (showComments){
+    	var d = document.createElement("div");
+    	var loadingSpinner = "<svg width='38' viewBox='0 0 42 42'><defs><linearGradient x1='8.042%' y1='0%' y2='100%' id='a'><stop stop-color='#000' stop-opacity='0' offset='0%'/><stop stop-color='#000' stop-opacity='.231' offset='63.146%'/><stop stop-color='#000' offset='100%'/></linearGradient></defs><g fill='none' fill-rule='evenodd'><g><path d='M36 20c0-9.94-8.06-20-20-20' stroke='url(#a)' stroke-width='3'><animateTransform attributeName='transform' type='rotate' from='0 20 20' to='360 20 20' dur='0.4s' repeatCount='indefinite'/></path></g></g></svg>";
+    	d.innerHTML = "<div style='font-size:11pt;font-weight:bold;user-select:none;'>Discussion</div><div id='comments-m" + modId + "a" + artId + "'>" + loadingSpinner + "</div>"
+    	v.appendChild(d);
+    	loadCommentsForArtifact(modId, artId);
+    }
 }
 
 function newTextArea(html) {
@@ -249,6 +302,10 @@ function showLoader(){
     if (!(lDiv.classList.contains("visible"))) {
         lDiv.classList.add("visible");
     }
+}
+
+loadCommentsForArtifact(modId, artId){
+	
 }
 function hideLoader(){
     var lDiv = document.getElementById("loadingInfo");
@@ -616,7 +673,12 @@ function showReview() {
         gMod.artifacts = [];
         gMod.artifactDetailsLoaded = false;
         gMod.pendingRequests = 0;
-
+        var baseBookOrderLastMovedBy = 0;
+        var baseBookNewClump = false;
+        var baseBookOrderClumpStartIndex = -1;;
+        var baseBookOrderClumpArtifactsCount = 0;
+        var baseBookClumpHasNewOrDeletedArtInside = false;//Show more intuitive info when a moved clump contains added or removed artifacts.
+        var baseBookNewOrDeletedOffset = 0;//Tracking book order changes that occurred due to added or removed artifacts.
         for (var art of m.moduleContext.contextBinding) {
             var gArt = new Object();
             gArt.id = art.identifier;
@@ -624,6 +686,43 @@ function showReview() {
             gArt.isHeading = (art.isHeading == "true");
             gArt.section = art.section;
             gArt.depth = art.depth;
+            gArt.bookOrder = art.bookOrder;
+            gArt.isMoved = false;
+            if (art.foundIn=="BOTH"){
+            	if (art.bookOrderInBase){
+					gArt.movedBy = art.bookOrderInBase - art.bookOrder - baseBookNewOrDeletedOffset;
+					if (gArt.movedBy !=0) {
+						if (baseBookOrderLastMovedBy!=gArt.movedBy){
+							if (baseBookOrderClumpStartIndex > 0 ){
+								gMod.artifacts[baseBookOrderClumpStartIndex].movedClumpLength = baseBookOrderClumpArtifactsCount;
+								gMod.artifacts[baseBookOrderClumpStartIndex].movedClumpHasNewOrDeleted = baseBookClumpHasNewOrDeletedArtInside;
+							}
+							baseBookClumpHasNewOrDeletedArtInside = false;
+							baseBookNewClump = true;
+							baseBookOrderClumpArtifactsCount = 0;
+							baseBookOrderLastMovedBy = gArt.movedBy;
+							gArt.isMoved = true;
+						}
+						baseBookOrderClumpArtifactsCount++;
+					}
+				} else {
+					if (baseBookOrderClumpStartIndex > 0 ){
+						gMod.artifacts[baseBookOrderClumpStartIndex].movedClumpLength = baseBookOrderClumpArtifactsCount;
+						gMod.artifacts[baseBookOrderClumpStartIndex].movedClumpHasNewOrDeleted = baseBookClumpHasNewOrDeletedArtInside;
+						baseBookOrderClumpStartIndex = -1;
+						baseBookClumpHasNewOrDeletedArtInside = false;
+					}
+					baseBookOrderLastMovedBy = 0;
+				}
+            } else {
+            	if (art.foundId == "SOURCE"){
+            		baseBookNewOrDeletedOffset++;
+            	} else {
+            		baseBookNewOrDeletedOffset--;
+            	}
+            	baseBookClumpHasNewOrDeletedArtInside = true
+            }
+
             gArt.address = art.about;
             var aObj = new Object();
             aObj.ModuleId = gMod.id;
@@ -631,12 +730,20 @@ function showReview() {
             if (gChangedArtIDs.indexOf(gArt.id) != -1) {
                 gArt.isChanged = true;
             } else {
-                gArt.isChanged = false;
+            	gArt.isChanged = false;
             }
-            aObj.isChanged = gArt.isChanged;
+            gArt.isChangedOrMoved = (gArt.isChanged||gArt.isMoved);
+            aObj.isChangedOrMoved = gArt.isChangedOrMoved;
             gOrderedArtifacts.push(aObj);
             gMod.artifacts.push(gArt);
+            if (baseBookNewClump){
+            	baseBookNewClump = false;
+            	baseBookOrderClumpStartIndex = gMod.artifacts.length-1;
+            }
         }
+        if (baseBookOrderClumpStartIndex > 0 ){
+			gMod.artifacts[baseBookOrderClumpStartIndex].movedClumpLength = baseBookOrderClumpArtifactsCount;
+		}
         
         //Setup Module Div
         var moduleDiv = document.createElement("div");
@@ -692,7 +799,7 @@ function loadModuleInfo(modId){
             } else if (a.foundIn == "SOURCE") {
                 d.classList.add("added");
             } else if (a.foundIn == "BOTH") {
-                if (a.isChanged) {
+                if (a.isChangedOrMoved) {
                     d.classList.add("changed");
                 }
             } else {
@@ -749,7 +856,7 @@ function clickModule(e, isManualClick=true) {
         if (isManualClick){ //If we manually clicked this module, auto-select the first changed artifact.
             for (i=0; i<gOrderedArtifacts.length; i++){
                 if (gOrderedArtifacts[i].ModuleId==id){
-                    if (gOrderedArtifacts[i].isChanged){
+                    if (gOrderedArtifacts[i].isChangedOrMoved){
                         gCurrentArtIndex = i-1;
                         nextChange();
                         break;
@@ -877,7 +984,7 @@ function nextChange() {
     gCurrentArtIndex++;
     var nextFound = false;
     for (i = gCurrentArtIndex; i<gOrderedArtifacts.length; i++){
-        if (gOrderedArtifacts[i].isChanged){
+        if (gOrderedArtifacts[i].isChangedOrMoved){
         	if (gShowNewChangesOnly){
         		var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
                 if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) != -1){
@@ -897,7 +1004,7 @@ function nextChange() {
         alert("Reached the last change! Continuing from start.");
         gCurrentArtIndex = 0;//Start from beginning if none found after.
         for (i = gCurrentArtIndex; i<gOrderedArtifacts.length; i++){
-            if (gOrderedArtifacts[i].isChanged){
+            if (gOrderedArtifacts[i].isChangedOrMoved){
             	if (gShowNewChangesOnly){
 					var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
 					if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) != -1){
@@ -919,7 +1026,7 @@ function prevChange() {
     gCurrentArtIndex--;
     var prevFound = false;
     for (i = gCurrentArtIndex; i >= 0; i--){
-        if (gOrderedArtifacts[i].isChanged){
+        if (gOrderedArtifacts[i].isChangedOrMoved){
         	if (gShowNewChangesOnly){
         		var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
                 if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) !=-1) {
@@ -938,7 +1045,7 @@ function prevChange() {
         alert("Reached the first change! Continuing from end.");
         gCurrentArtIndex = gOrderedArtifacts.length-1;//Start from end if none found before.
         for (i = gCurrentArtIndex; i >= 0; i--){
-            if (gOrderedArtifacts[i].isChanged){
+            if (gOrderedArtifacts[i].isChangedOrMoved){
             	if (gShowNewChangesOnly){
 					var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
 					if (gReviewerInfo[gMyUserId].artifactsNotReviewed.indexOf(divId) != -1){
