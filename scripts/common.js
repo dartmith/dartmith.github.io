@@ -110,7 +110,11 @@ function getTimeLabel(timestamp){
 
     var val;
     var unit;
+    var now = false;
     switch (true) {
+    	case (t < 30):
+            now = true;
+            break;
         case (t < 60):
             unit = "second";
             val = Math.round(t);
@@ -139,11 +143,16 @@ function getTimeLabel(timestamp){
             unit = "year";
             val = Math.round(t/31557600);
     }
-    if (val < 2){
-        ts.timeAgo = val + " " + unit + " ago";
+    if (now){
+        ts.timeAgo = "Now";
     } else {
-        ts.timeAgo = val + " " + unit + "s ago";
+    	if (val < 2){
+			ts.timeAgo = val + " " + unit + " ago";
+		} else {
+			ts.timeAgo = val + " " + unit + "s ago";
+		}
     }
+    
     return ts;
 }
 

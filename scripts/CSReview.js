@@ -20,8 +20,22 @@ var gLatestChange = "";
 var gMyUserId = "";
 var gShowNewChangesOnly = false;
 var gWIId = ""; //This is used to track approvals. When approving, a comment is added to a work item stating that you approve changes up until this date.
+var gShowResolvedComments=false;
+var gShowOthersComments = true;
+var gShowUnansweredComments = true;
+var gCommentPane;
+var gMyCommentText = "";
 
+var gCommentsOnTop = false;
+
+
+var UserNames = null;
+var UserPhotos = new Object();
+var userNumber = 0;
 var gReviewerInfo = new Object();
+
+initCLMUserInfo();
+
 
 function startNewReview(){
     toggleMenu();
@@ -146,7 +160,7 @@ function clickArtifact(e) {
     }
 
     
-    var v = document.getElementById("artifactPane");
+    var v = document.getElementById("artifactAttributeDetails");
     v.innerHTML = "<div class='tinyHeader'>" + numChangedDone + " of " + totChanged + "</div>";
 
     document.getElementById("artifactPaneTitle").innerHTML = "Artifact " + a.identifier;
@@ -277,14 +291,53 @@ function clickArtifact(e) {
     } else {
         v.appendChild(newPanel("Attributes in Stream", sAttrs));
     }
+    var d = document.getElementById("commentsArea");
     if (showComments){
-    	var d = document.createElement("div");
     	var loadingSpinner = "<svg width='38' viewBox='0 0 42 42'><defs><linearGradient x1='8.042%' y1='0%' y2='100%' id='a'><stop stop-color='#000' stop-opacity='0' offset='0%'/><stop stop-color='#000' stop-opacity='.231' offset='63.146%'/><stop stop-color='#000' offset='100%'/></linearGradient></defs><g fill='none' fill-rule='evenodd'><g><path d='M36 20c0-9.94-8.06-20-20-20' stroke='url(#a)' stroke-width='3'><animateTransform attributeName='transform' type='rotate' from='0 20 20' to='360 20 20' dur='0.4s' repeatCount='indefinite'/></path></g></g></svg>";
-    	d.innerHTML = "<div style='font-size:11pt;font-weight:bold;user-select:none;'>Discussion</div><div id='comments-m" + modId + "a" + artId + "'>" + loadingSpinner + "</div>"
-    	v.appendChild(d);
+    	d.innerHTML = "<div id='comments-m" + modId + "a" + artId + "'>" + loadingSpinner + "</div>"
     	loadCommentsForArtifact(modId, artId);
+    } else {
+    	document.getElementById("commentSummary").innerHTML = "";
+        d.innerHTML = "Comments are disabled on out-of-scope (unchanged) artifacts.";
     }
 }
+
+function setupShowHideResolvedCommentsButton(){
+    var shIcon = document.getElementById("showHideResolvedCommentsIcon");
+    var shText = document.getElementById("showHideResolvedCommentsTipText");
+	if (gShowResolvedComments){
+		shText.innerHTML = "Click to hide resolved comments.";
+		shIcon.setAttribute("d", "M.2 10a11 11 0 0 1 19.6 0A11 11 0 0 1 .2 10zm9.8 4a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0-2a2 2 0 1 1 0-4 2 2 0 0 1 0 4z");
+	} else {
+		shText.innerHTML = "Resolved comments are hidden.\nClick to show resolved comments.";
+		shIcon.setAttribute("d", "M12.81 4.36l-1.77 1.78a4 4 0 0 0-4.9 4.9l-2.76 2.75C2.06 12.79.96 11.49.2 10a11 11 0 0 1 12.6-5.64zm3.8 1.85c1.33 1 2.43 2.3 3.2 3.79a11 11 0 0 1-12.62 5.64l1.77-1.78a4 4 0 0 0 4.9-4.9l2.76-2.75zm-.25-3.99l1.42 1.42L3.64 17.78l-1.42-1.42L16.36 2.22z");
+	}
+}
+
+function setupShowHideOthersCommentsButton(){
+    var shIcon = document.getElementById("showHideOthersCommentsIcon");
+    var shText = document.getElementById("showHideOthersCommentsTipText");
+	if (gShowOthersComments){
+		shText.innerHTML = "Click to hide other's comments.";
+		shIcon.setAttribute("d", "M7 8a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm0 1c2.15 0 4.2.4 6.1 1.09L12 16h-1.25L10 20H4l-.75-4H2L.9 10.09A17.93 17.93 0 0 1 7 9zm8.31.17c1.32.18 2.59.48 3.8.92L18 16h-1.25L16 20h-3.96l.37-2h1.25l1.65-8.83zM13 0a4 4 0 1 1-1.33 7.76 5.96 5.96 0 0 0 0-7.52C12.1.1 12.53 0 13 0z");
+	} else {
+		shText.innerHTML = "Comments by others are hidden.\nClick to show comments from everyone.";
+		shIcon.setAttribute("d", "M5 5a5 5 0 0 1 10 0v2A5 5 0 0 1 5 7V5zM0 16.68A19.9 19.9 0 0 1 10 14c3.64 0 7.06.97 10 2.68V20H0v-3.32z");
+	}
+}
+
+function setupShowHideUnansweredCommentsButton(){
+    var shIcon = document.getElementById("showHideUnansweredCommentsIcon");
+    var shText = document.getElementById("showHideUnansweredCommentsTipText");
+	if (gShowUnansweredComments){
+		shText.innerHTML = "Click to hide comments you've answered.\nThis hides comments where no replies or artifact changes were made since your last reply.";
+		shIcon.setAttribute("d", "M10 20a10 10 0 1 1 0-20 10 10 0 0 1 0 20zM7.88 7.88l-3.54 7.78 7.78-3.54 3.54-7.78-7.78 3.54zM10 11a1 1 0 1 1 0-2 1 1 0 0 1 0 2z");
+	} else {
+		shText.innerHTML = "Comment's you've answered are hidden.\nClick to show comments that you've answered.";
+		shIcon.setAttribute("d", "M10 20a10 10 0 1 1 0-20 10 10 0 0 1 0 20zm1-5h1a3 3 0 0 0 0-6H7.99a1 1 0 0 1 0-2H14V5h-3V3H9v2H8a3 3 0 1 0 0 6h4a1 1 0 1 1 0 2H6v2h3v2h2v-2z");
+	}
+}
+
 
 function newTextArea(html) {
     return "<div class=\"textBox\">" + html + "</div>"
@@ -296,37 +349,174 @@ function newPanel(title, html) {
 }
 function showLoader(){
     var lDiv = document.getElementById("loadingInfo");
-    if (lDiv.classList.contains("hidden")) {
-        lDiv.classList.remove("hidden");
-    }
-    if (!(lDiv.classList.contains("visible"))) {
-        lDiv.classList.add("visible");
+	lDiv.classList.remove("hidden");
+	lDiv.classList.add("visible");
+}
+
+function loadCommentsForArtifact(modId, artId){
+	
+	$.ajax({
+        async:true,
+        url: "https://maximus/files/CSReviewComments/getComments.php",
+        success:function(data){
+        	gCommentPane = document.getElementById("comments-m" + modId + "a" + artId);
+			if(gCommentPane){
+				var comments = $.parseJSON(data);
+				if (comments.length==0){
+                    gCommentPane.innerHTML = "No comments yet.";
+				} else {
+					gCommentPane.innerHTML = "";
+					for (c of comments){
+                        addComment(gCommentPane, c);
+					}
+				}
+				addComment(gCommentPane);
+				setupShowHideResolvedCommentsButton();
+				setupShowHideOthersCommentsButton();
+				setupShowHideUnansweredCommentsButton();
+				if (gMyCommentText !=""){
+					document.getElementById("myCommentEntry").classList.add("editing");
+					setTimeout(autoGrowMyComment, 80);
+				}
+				filterComments();
+				$('#newCommentContent').on('change keyup keydown paste cut', autoGrowMyComment);
+				$('#newCommentContent').on('keyup', trackMyCommentText);
+				$('#newCommentContent').on('keydown', saveReviewComment);
+				trackMyCommentText();
+				resized();
+			}
+        },
+        error:function(error){
+        	gCommentPane = document.getElementById("comments-m" + modId + "a" + artId);
+            if(gCommentPane){
+            	gCommentPane.innerHTML = "<div class='visible error'>Failed to load comments.</div>"
+            }
+            console.log(error);
+        }
+    });
+}
+
+function addComment(parentElement, c=null){
+	var userPhoto = "";
+	var userName = "";
+	var comDate = "";
+	var content = "";
+	var state = null;
+	var resolveIcon = null;
+	var comContainer = document.createElement("div");
+	var d = document.createElement("div");
+	comContainer.appendChild(d);
+	d.classList.add("comment");
+	if (c==null) { //Generate the new comment div.
+	    userName = UserNames[gMyUserId];
+        userPhoto = getUserPhoto(gMyUserId);
+        d.id = "myCommentEntry";
+        comDate = "<div id='btnSaveReviewComment' style='margin:-2px;float:right;'><svg onclick='saveReviewComment()' width='15' class='svgButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
+        content = "<textarea class='commentTextArea' id='newCommentContent' placeholder='Write a comment...' rows='1' autocomplete='off'>" + gMyCommentText + "</textarea>";
+	} else {
+		userName = UserNames[c.userId];
+        userPhoto = getUserPhoto(c.userId);
+        var dateObj = getTimeLabel(c.date);
+        comDate = "<span " + dateObj.title + ">" + dateObj.timeAgo + "</span>";
+        content = c.content;
+        state = c.state;
+        resolveIcon = "<svg viewBox='0 0 20 20'><path d='M0 11l2-2 5 5L18 3l2 2L7 18z'/></svg>";
+        if (c.userId!=gMyUserId){
+        	comContainer.classList.add("anothersComment");
+        }
+	}
+	
+	if (state=="Resolved"){
+		comContainer.classList.add(state);
+	}
+
+	var t = "<table style='width:100%;'><tr><td style='width:48px;'><img class='commentAvatar' src='";
+	t += userPhoto + "'></td><td style='width:calc(100% - 48px);padding-left:6px;vertical-align:top'>";
+	t+= "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + comDate + "</span></div>";
+	t+= content + "</td></tr></table>";
+	d.innerHTML = t;
+    addSubComments(comContainer, c);
+	parentElement.appendChild(comContainer);
+}
+
+function addSubComments(parentElement, c){
+    if (c){
+    	if (c.replies){
+            for (var sc of c.replies){
+            	var d = document.createElement("div");
+	            d.classList.add("subComment");
+            	var userName = UserNames[sc.userId];
+				var userPhoto = getUserPhoto(sc.userId);
+				var dateObj = getTimeLabel(sc.date);
+				comDate = "<span " + dateObj.title + ">" + dateObj.timeAgo + "</span>";
+				content = sc.content;
+            	var t = "<table style='width:100%;'><tr><td style='width:30px;'><img class='subCommentAvatar' src='";
+				t += userPhoto + "'></td><td style='width:calc(100% - 30px);padding-left:6px;vertical-align:top'>";
+				t+= "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + comDate + "</span></div>";
+				t+= content + "</td></tr></table>";
+				d.innerHTML = t;
+				parentElement.appendChild(d);
+            }
+    	}
     }
 }
 
-loadCommentsForArtifact(modId, artId){
-	
+function autoGrowMyComment(e){
+	var d = document.getElementById("newCommentContent");
+	var pane= document.getElementById("artifactPane");
+	d.style.height = "0";
+	d.style.height = d.scrollHeight;
+	pane.scrollTop = pane.scrollHeight;
 }
+
+function saveReviewComment(e=null){
+	var saveComment = false;
+	if (e){
+        if (e.originalEvent.ctrlKey){
+			if (e.originalEvent.keyCode==83){
+				e.preventDefault();
+                saveComment = true;
+			}
+		}
+	} else {
+		saveComment = true;
+	}
+	if (saveComment){
+		if (document.getElementById("newCommentContent").value == ""){
+            alert("Can't save an empty comment.");
+		} else {
+			alert("Saving...");
+			
+			document.getElementById("newCommentContent").value = "";
+			autoGrowMyComment();
+			setTimeout(trackMyCommentText, 50);
+		}
+	}
+}
+
+function trackMyCommentText(){
+	gMyCommentText = document.getElementById("newCommentContent").value;
+	if (gMyCommentText !=""){
+		$("#btnSaveReviewComment").show();
+		document.getElementById("myCommentEntry").classList.add("editing");
+	} else {
+		document.getElementById("myCommentEntry").classList.remove("editing");
+		$("#btnSaveReviewComment").hide();
+	}
+}
+
 function hideLoader(){
     var lDiv = document.getElementById("loadingInfo");
-    if (!(lDiv.classList.contains("hidden"))) {
-        lDiv.classList.add("hidden");
-    }
-    if (lDiv.classList.contains("visible")) {
-        lDiv.classList.remove("visible");
-    }
+	lDiv.classList.add("hidden");
+	lDiv.classList.remove("visible");
 }
-
 
 function startLoading(moduleId, text) {
     var lDiv = document.getElementById("loadingInfo" + moduleId);
     document.getElementById("loadingInfo" + moduleId + "Text").innerHTML = text;
-    if (lDiv.classList.contains("hidden")) {
-        lDiv.classList.remove("hidden");
-    }
-    if (!(lDiv.classList.contains("visible"))) {
-        lDiv.classList.add("visible");
-    }
+    
+    lDiv.classList.remove("hidden");
+    lDiv.classList.add("visible");
 }
 
 function loadingText(moduleId, text) {
@@ -335,12 +525,8 @@ function loadingText(moduleId, text) {
 
 function endLoading(moduleId) {
     var lDiv = document.getElementById("loadingInfo" + moduleId);
-    if (!(lDiv.classList.contains("hidden"))) {
         lDiv.classList.add("hidden");
-    }
-    if (lDiv.classList.contains("visible")) {
         lDiv.classList.remove("visible");
-    }
 }
 
 function loadArtifactsInBackground() {
@@ -518,6 +704,7 @@ function removeOuterPTag(text) {
 }
 
 const navigateToReview = (event, changeSetInfo)=>{
+	gMyCommentText = "";
     showLoader();
     event.preventDefault();
     curChangeSet = changeSetInfo["rdf:about"];
@@ -543,18 +730,20 @@ function loadReviewerInfo(response){
 			//Switch to JSON Parsing if this gets more complicated.
 			var lModMarker = "https://review.info?lastModified=&quot;";
 			if (cT.indexOf(lModMarker)!=-1){
-				var userInfo = new Object();
-				userInfo.userName = c.creator.name;
-				userInfo.userId = c.creator.userId;
-				userInfo.artifactsNotReviewed = [];
-				var lModText = cT.substr(cT.indexOf(lModMarker) + lModMarker.length);
-				userInfo.lastModified = lModText.substr(0, lModText.indexOf("&quot;"));
-				if (gReviewerInfo[userInfo.userId]){
-					if (userInfo.lastModified > gReviewerInfo[userInfo.userId].lastModified){
-						gReviewerInfo[userInfo.userId].lastModified = userInfo.lastModified;
+				if (cT.indexOf(curChangeSet)!=-1){ //Filter out comments about other change sets.
+					var userInfo = new Object();
+					userInfo.userName = c.creator.name;
+					userInfo.userId = c.creator.userId;
+					userInfo.artifactsNotReviewed = [];
+					var lModText = cT.substr(cT.indexOf(lModMarker) + lModMarker.length);
+					userInfo.lastModified = lModText.substr(0, lModText.indexOf("&quot;"));
+					if (gReviewerInfo[userInfo.userId]){
+						if (userInfo.lastModified > gReviewerInfo[userInfo.userId].lastModified){
+							gReviewerInfo[userInfo.userId].lastModified = userInfo.lastModified;
+						}
+					} else {
+						gReviewerInfo[userInfo.userId] = userInfo;
 					}
-				} else {
-					gReviewerInfo[userInfo.userId] = userInfo;
 				}
 			}
 		}
@@ -749,7 +938,7 @@ function showReview() {
         var moduleDiv = document.createElement("div");
         moduleDiv.style = "display:none";
         var newLoader = document.createElement("div");
-
+        newLoader.classList.add("loader");
         newLoader.innerHTML = newLoaderText.replaceAll("\"loadingInfo","\"loadingInfo" + gMod.id);
         moduleDiv.appendChild(newLoader);
         container.appendChild(moduleDiv);
@@ -887,17 +1076,14 @@ function showWIInfo(){
 }
 
 function processChangeSets(response){
-    document.getElementById('changeSetReviewItems').innerHTML = '';
-    document.getElementById('changeSetDeliveredItems').innerHTML = '';
+    document.getElementById("changeSetReviewItems").innerHTML = "Loading...";
+    document.getElementById("changeSetDeliveredItems").innerHTML = "Loading...";
     var WI = response[0];
     if (WI){
         gWIId = WI.id;
         if (gWIId==document.getElementById("workItemInput").value){
             document.getElementById("searchWiInfo").innerHTML = WI.id + ": " + WI.summary;
             document.getElementById("wiInfo").innerHTML = WI.id + ": " + WI.summary;
-            document.getElementById("changeSetReviewItems").innerHTML = "None";
-            document.getElementById("changeSetDeliveredItems").innerHTML = "None";
-
             showWIInfo();
             var changeSets = [];
             for (cs of WI.auditableLinks) {
@@ -922,33 +1108,73 @@ function addChangeSetInfo(response){
     pendingRequests--;
     var changeSetInfo = response[0];
     var changeSetTitle = changeSetInfo['dcterms:title'];
-    
+    var csCreator ="";
+    if (changeSetInfo["dcterms:creator"]){
+        csCreator = changeSetInfo["dcterms:creator"]["rdf:resource"];
+		csCreator = csCreator.substr(csCreator.lastIndexOf("/")+1);
+		csCreator = UserNames[csCreator];
+		csCreator = "\nBy: " + csCreator;
+    }
+    var csCreated = changeSetInfo["dcterms:created"];
+    var csCreatedPretty = "Created: " + getTimeLabel(csCreated).prettyDate + csCreator;
+    if (document.getElementById("changeSetDeliveredItems").innerHTML == "Loading..."){
+		document.getElementById("changeSetDeliveredItems").innerHTML = "None";
+	}
+	if (document.getElementById("changeSetReviewItems").innerHTML == "Loading..."){
+		document.getElementById("changeSetReviewItems").innerHTML = "None";
+	}
+
+	var parentDiv;
     if (changeSetTitle.indexOf("(delivered)") != -1) {
         if (document.getElementById("changeSetDeliveredItems").innerHTML == "None"){
-            document.getElementById("changeSetDeliveredItems").innerHTML = "";
-        }
+			document.getElementById("changeSetDeliveredItems").innerHTML = "";
+		}
         const changeSetReviewItem = document.createElement('div');
+        changeSetReviewItem.setAttribute("title", csCreatedPretty);
         changeSetTitle = changeSetTitle.substr(0, changeSetTitle.indexOf("(delivered)"));
         changeSetReviewItem.innerHTML = changeSetTitle;
-        document.getElementById('changeSetDeliveredItems').appendChild(changeSetReviewItem);
+        var d = document.getElementById('changeSetDeliveredItems');
+        var insertAtEnd = true;
+        if (d.children.length > 0){
+            for (var item of d.children){
+            	if (item.innerHTML > changeSetTitle){
+            		insertAtEnd = false;
+                    d.insertBefore(changeSetReviewItem, item);
+            		break;
+            	}
+            }
+        }
+        if (insertAtEnd){
+        	d.appendChild(changeSetReviewItem);
+        }
     } else {
         if (document.getElementById("changeSetReviewItems").innerHTML == "None"){
             document.getElementById("changeSetReviewItems").innerHTML = "";
         }
-        const changeSetReviewItem = document.createElement('div');
-        const changeSetLinkText = document.createTextNode(changeSetTitle);
-        //when creating elements, you can pass an options parameter with the id and other attributes 
-        //that will be helpful when doing styling
-        const changeSetLink = document.createElement('a');
-
-        changeSetLink.appendChild(changeSetLinkText);
+        var changeSetReviewItem = document.createElement('div');
+        changeSetReviewItem.setAttribute("created", changeSetInfo["dcterms:created"]);
+        changeSetReviewItem.setAttribute("title", csCreatedPretty);
+        var changeSetLink = document.createElement("a");
         changeSetLink.href = '';
+        changeSetLink.innerHTML = changeSetTitle;
         changeSetLink.addEventListener('click', event=>navigateToReview(event, changeSetInfo));
         changeSetReviewItem.appendChild(changeSetLink);
-        document.getElementById('changeSetReviewItems').appendChild(changeSetReviewItem);
+        
+        var d = document.getElementById('changeSetReviewItems');
+        var insertAtEnd = true;
+        if (d.children.length > 0){
+            for (var item of d.children){
+            	if (item.attributes.created.value > changeSetInfo["dcterms:created"]) {
+            		insertAtEnd = false;
+                    d.insertBefore(changeSetReviewItem, item);
+            		break;
+            	}
+            }
+        }
+        if (insertAtEnd){
+        	d.appendChild(changeSetReviewItem);
+        }
     }
-
-    
 }
 
 function resize() {
@@ -1166,3 +1392,95 @@ function addWIComment(cText){
 		});
 	}
 }
+
+function getUserPhoto(userId){
+    if (UserPhotos[userId]==null){
+		userNumber++;
+		if (userNumber>8){
+			userNumber = 1;
+		}
+		UserPhotos[userId] = "images/user" + userNumber + ".svg";
+    }
+    return UserPhotos[userId];
+}
+
+function initCLMUserInfo(){
+	if (UserNames==null){
+		UserNames = new Object();
+		var url = RTCURL() + "oslc/users";
+        returnAllOSLCResults(url, CLMUserInfoReturn, true);
+	}
+	
+}
+
+function CLMUserInfoReturn(data){
+	var userNumber = 0;
+	for (var u of data){
+		UserNames[u.userId] = u.title;
+		if (u.photo.url){
+			UserPhotos[u.userId] = u.photo.url;
+		} else {
+            //We handle the population of the user photos when we add comments to help get different colors per user from the 8 options available.
+		} 
+	}
+}
+function showHideResolvedComments(){
+	gShowResolvedComments = !gShowResolvedComments;
+	filterComments();
+	setupShowHideResolvedCommentsButton();
+}
+
+function showHideOthersComments(){
+	gShowOthersComments = !gShowOthersComments;
+	filterComments();
+	setupShowHideOthersCommentsButton();
+}
+
+function showHideUnansweredComments(){
+	gShowUnansweredComments = !gShowUnansweredComments;
+	filterComments();
+	setupShowHideUnansweredCommentsButton();
+}
+
+function filterComments(){
+	var rDivs = gCommentPane.getElementsByClassName("Resolved");
+    var oDivs = gCommentPane.getElementsByClassName("anothersComment");
+    var uDivs = gCommentPane.getElementsByClassName("unansweredComment");
+    var unresolvedCommentsCount = gCommentPane.children.length - rDivs.length -1; //Extra 1 is the "New Comment" entry
+    document.getElementById("commentSummary").innerHTML = unresolvedCommentsCount + " Unresolved Comments"
+    //First, show all that should be shown
+    if (gShowOthersComments){
+    	for (d of oDivs){
+        	$(d).show();
+        }
+    }
+    if (gShowResolvedComments){
+    	for (d of rDivs){
+        	$(d).show();
+        }
+    }
+    if (gShowUnansweredComments){
+    	for (d of uDivs){
+        	$(d).show();
+        }
+    }
+    //Then, hide all that should be hidden
+    if (!gShowOthersComments){
+    	for (d of oDivs){
+        	$(d).hide();
+        }
+    }
+    if (!gShowResolvedComments){
+    	for (d of rDivs){
+        	$(d).hide();
+        }
+    }
+    if (!gShowUnansweredComments){
+    	for (d of uDivs){
+        	$(d).hide();
+        }
+    }
+
+
+}
+

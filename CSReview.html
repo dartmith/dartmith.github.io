@@ -13,7 +13,7 @@
                 <div id="workItemInputContainer">
                     <input id="workItemInput" incremental onsearch="idEntered()" pattern="[0-9]+" type="search" placeholder="Work Item Id" autocomplete="off"/>
                 </div>
-                <div class="hidden" style="position:absolute;" id="workItemInputError">Work Item Not Found</div>
+                <div class="hidden error" style="position:absolute;" id="workItemInputError">Work Item Not Found</div>
                 <div id="wiInfoSection" class="hidden">
                     <div class="titleHeader" id="searchWiInfo"></div>
                     <div>
@@ -34,9 +34,9 @@
             </div>
         </div>
     </div>
-    <div id = "loadingInfo" style='margin:0;position:fixed;top:30px;left:50%;margin-right:-50%;transform:translate(-50%);text-align:center; background-color: white; border:1px solid rgb(194, 194, 194);border-radius:10px;box-shadow: 0px 0px 10px rgb(0 0 0 / 0.4)'>
+    <div id="loadingInfo" class="loader">
         <div style="padding:30px;">
-            <svg width="38" viewBox="0 0 42 42">
+            <svg width="75" viewBox="0 0 42 42">
                 <defs>
                     <linearGradient x1="8.042%" y1="0%" y2="100%" id="a">
                         <stop stop-color="#000" stop-opacity="0" offset="0%"/>
@@ -46,14 +46,14 @@
                 </defs>
                 <g fill="none" fill-rule="evenodd">
                     <g transform="translate(1 1)">
-                        <path d="M36 20c0-9.94-8.06-20-20-20" stroke="url(#a)" stroke-width="6">
+                        <path d="M36 20c0-9.94-8.06-20-20-20" stroke="url(#a)" stroke-width="3">
                             <animateTransform attributeName="transform" type="rotate" from="0 20 20" to="360 20 20" dur="0.5s" repeatCount="indefinite"/>
                         </path>
                     </g>
                 </g>
             </svg>
         </div>
-        <div id="loadingInfoText" style='color:rgb(107, 107, 107); padding-bottom:30;padding-left:60;padding-right:60;font-size:11pt;'>
+        <div id="loadingInfoText" style='color:rgb(107, 107, 107); padding-bottom:30;padding-left:60;padding-right:60;'>
             Loading...
         </div>
     </div>
@@ -75,7 +75,6 @@
                     <tbody id='tableBody'>
                         <tr style="vertical-align: top;">
                             <td id="leftPane">
-
                                 <div id='btnMenu' style='position:absolute;top:6px;left:6px;'>
                                     <svg onclick='toggleMenu()' width='26' class='svgButton' viewBox='0 0 26 26'>
                                         <title>Review Menu</title>
@@ -133,22 +132,61 @@
                             </td>
                             <td id="centerPane"><div id='reviewContainer' style="width:100%;"></div></td>
                             <td id="rightPane">
-                                <div>
-                                    <div id='btnPrevChange' style='margin:4px;float:left;'>
-                                        <svg onclick='prevChange()' width='26' class='svgButton' viewBox='0 0 32 32'>
-                                            <title>Navigate to the previous change.</title>
-                                            <polygon points="16,2.001 16,10 30,10 30,22 16,22 16,30 2,16"/>
-                                        </svg>
-                                    </div>
-                                    <div id='btnNextChange' style='margin:4px;float:right;'>
-                                        <svg onclick='nextChange()' width='26' class='svgButton' viewBox='0 0 32 32'>
-                                            <title>Navigate to the next change.</title>
-                                            <polygon points="16,2.001 16,10 2,10 2,22 16,22 16,30 30,16"/>
-                                        </svg>
+                                <div >
+                                    <div id="artifactAttributesPane">
+                                        <div style='margin:5px;float:left;'>
+                                            <svg onclick='prevChange()' width='26' class='svgButton' viewBox='0 0 32 32'>
+                                                <title>Navigate to the previous change.</title>
+                                                <polygon points="16,2.001 16,10 30,10 30,22 16,22 16,30 2,16"/>
+                                            </svg>
+                                        </div>
+                                        <div style='margin:5px;float:right;'>
+                                            <svg onclick='nextChange()' width='26' class='svgButton' viewBox='0 0 32 32'>
+                                                <title>Navigate to the next change.</title>
+                                                <polygon points="16,2.001 16,10 2,10 2,22 16,22 16,30 30,16"/>
+                                            </svg>
+                                        </div>
+                                        <div id="artifactPaneTitle" class="titleHeader">&nbsp;</div>
+                                        <div id="artifactPane" style="padding:10px;overflow-y:auto;">
+                                            <div id="artifactAttributeDetails">&nbsp;</div>
+                                            <div id="commentPane">
+                                                <div style='margin:2px;float:left;'>
+                                                    <svg onclick='PrevArtWComments()' width='15' class='svgButton' viewBox='0 0 32 32'>
+                                                        <title>Navigate to the previous artifact with displayed comments.</title>
+                                                        <polygon points="16,2.001 16,10 30,10 30,22 16,22 16,30 2,16"/>
+                                                    </svg>
+                                                </div>
+                                                <div style='margin:2px;float:left;'>
+                                                    <svg onclick='nextArtWComments()' width='15' class='svgButton' viewBox='0 0 32 32'>
+                                                        <title>Navigate to the next artifact with displayed comments.</title>
+                                                        <polygon points="16,2.001 16,10 2,10 2,22 16,22 16,30 30,16"/>
+                                                    </svg>
+                                                </div>
+                                                <div style='margin:2px;float:right;'>
+                                                    <svg onclick='showHideOthersComments()' width='15' class='svgButton' viewBox='0 0 20 20'>
+                                                        <title id='showHideOthersCommentsTipText'></title>
+                                                        <path id='showHideOthersCommentsIcon' d=''/>
+                                                    </svg>
+                                                </div>
+                                                <div style='margin:2px;float:right;'>
+                                                    <svg onclick='showHideResolvedComments()' width='15' class='svgButton' viewBox='0 0 20 20'>
+                                                        <title id='showHideResolvedCommentsTipText'></title>
+                                                        <path id='showHideResolvedCommentsIcon' d=''/>
+                                                    </svg>
+                                                </div>
+                                                <div style='margin:2px;float:right;'>
+                                                    <svg onclick='showHideUnansweredComments()' width='15' class='svgButton' viewBox='0 0 20 20'>
+                                                        <title id='showHideUnansweredCommentsTipText'></title>
+                                                        <path id='showHideUnansweredCommentsIcon' d=''/>
+                                                    </svg>
+                                                </div>
+                                                <div class="lowerHeader">Discussion</div>
+                                                <div id="commentSummary" class="tinyHeader">&nbsp;</div>
+                                                <div id="commentsArea"></div>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <div id="artifactPaneTitle" class="titleHeader">&nbsp;</div>
-                                <div id="artifactPane" style="padding:10px;overflow-y:auto;"></div>
                             </td>
                         </tr>
                     </tbody>
