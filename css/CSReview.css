@@ -46,7 +46,7 @@ height: 100%;
     left: calc(50% - 250px);
 }
 #workiteminputContainer {
-    margin-left: calc(50% - 65px);
+    margin-left: calc(50% - 100px);
 }
 
 #workItemInputError{
@@ -237,7 +237,7 @@ h5.textContent {font-size: 11pt;}
 
 .lowerHeader{
     padding:5 10;
-    padding-left:28px;
+    padding-left:80px;
     color:black;
     background-color:#f0f0f0;
     font-size:10pt;
@@ -245,6 +245,7 @@ h5.textContent {font-size: 11pt;}
     border:1px solid #c1c1c1;
     text-align:center;
     margin-bottom:14px;
+    user-select:none;
 }
 
 .textBox{
@@ -286,47 +287,47 @@ ins{background-color:#e0ffe0;}
 del{background-color:#ffd6d6da;}
 
 .comment{
-    border:2px dotted #adadad;
+    padding:2 0;
+}
+
+.commentContainer{
+    border:2px dotted #7ac498;
     border-top-left-radius:28px;
     border-bottom-left-radius:28px;
     border-top-right-radius:13px;
     border-bottom-right-radius:13px;
-    padding:2px;
     margin:5 0;
     cursor:pointer;
     user-select:none;
+    title:"Click to add reply";
+    background-color:white;
+    transition: background-color 0.1s linear;
 }
 
 .subComment{
-    padding:0px;
-    margin:-4 0 10 30;
-    cursor:normal;
+    padding:2 0;
+    margin:0 0 0 30;
     user-select:none;
 }
 
-.comment:hover{
+.commentContainer:hover{
     background-color: aliceblue;
 }
+
 .Resolved {
-    /*border:2px solid #afffa1;*/
-    background-color:#f5fff6;
+    border:2px solid #aac5bf;
+    background-color:#d0ece2;
 }
 .editing {
     border:2px solid #5ac5ff;
     background-color: aliceblue;
+    transition: background-color 0.1s linear;
 }
-.Resolved > * {
-     color:#297327;
+.replyEditor{
+    font-color:red;
 }
-
 .Resolved:hover {
-    background-color: #d1ffe4;
-}
-.Resolved:hover >* {
-    background-color: #d1ffe4;
-}
-.Resolved:hover > * {
-    color:#364338;
+    background-color: #d0ece2;
 }
 
 .commentHeader{

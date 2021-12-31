@@ -25,6 +25,8 @@ var gShowOthersComments = true;
 var gShowUnansweredComments = true;
 var gCommentPane;
 var gMyCommentText = "";
+var gModuleComments = new Object();
+var gArtifactsWithShownComments = [];
 
 var gCommentsOnTop = false;
 
@@ -291,14 +293,12 @@ function clickArtifact(e) {
     } else {
         v.appendChild(newPanel("Attributes in Stream", sAttrs));
     }
-    var d = document.getElementById("commentsArea");
+    
     if (showComments){
-    	var loadingSpinner = "<svg width='38' viewBox='0 0 42 42'><defs><linearGradient x1='8.042%' y1='0%' y2='100%' id='a'><stop stop-color='#000' stop-opacity='0' offset='0%'/><stop stop-color='#000' stop-opacity='.231' offset='63.146%'/><stop stop-color='#000' offset='100%'/></linearGradient></defs><g fill='none' fill-rule='evenodd'><g><path d='M36 20c0-9.94-8.06-20-20-20' stroke='url(#a)' stroke-width='3'><animateTransform attributeName='transform' type='rotate' from='0 20 20' to='360 20 20' dur='0.4s' repeatCount='indefinite'/></path></g></g></svg>";
-    	d.innerHTML = "<div id='comments-m" + modId + "a" + artId + "'>" + loadingSpinner + "</div>"
     	loadCommentsForArtifact(modId, artId);
     } else {
     	document.getElementById("commentSummary").innerHTML = "";
-        d.innerHTML = "Comments are disabled on out-of-scope (unchanged) artifacts.";
+        document.getElementById("commentsArea").innerHTML = "Comments are disabled on out-of-scope (unchanged) artifacts.";
     }
 }
 
@@ -353,47 +353,67 @@ function showLoader(){
 	lDiv.classList.add("visible");
 }
 
-function loadCommentsForArtifact(modId, artId){
-	
-	$.ajax({
+function loadModuleComments(modId, changesetId){
+    gModuleComments[modId] = null;
+    $.ajax({
         async:true,
         url: "https://maximus/files/CSReviewComments/getComments.php",
         success:function(data){
-        	gCommentPane = document.getElementById("comments-m" + modId + "a" + artId);
-			if(gCommentPane){
-				var comments = $.parseJSON(data);
-				if (comments.length==0){
-                    gCommentPane.innerHTML = "No comments yet.";
-				} else {
-					gCommentPane.innerHTML = "";
-					for (c of comments){
-                        addComment(gCommentPane, c);
-					}
+            gModuleComments[modId] = [];
+            var comments = $.parseJSON(data);
+			if (comments.length>0){
+				for (c of comments){
+					gModuleComments[modId].push(c);
 				}
-				addComment(gCommentPane);
-				setupShowHideResolvedCommentsButton();
-				setupShowHideOthersCommentsButton();
-				setupShowHideUnansweredCommentsButton();
-				if (gMyCommentText !=""){
-					document.getElementById("myCommentEntry").classList.add("editing");
-					setTimeout(autoGrowMyComment, 80);
-				}
-				filterComments();
-				$('#newCommentContent').on('change keyup keydown paste cut', autoGrowMyComment);
-				$('#newCommentContent').on('keyup', trackMyCommentText);
-				$('#newCommentContent').on('keydown', saveReviewComment);
-				trackMyCommentText();
-				resized();
 			}
         },
         error:function(error){
-        	gCommentPane = document.getElementById("comments-m" + modId + "a" + artId);
-            if(gCommentPane){
-            	gCommentPane.innerHTML = "<div class='visible error'>Failed to load comments.</div>"
-            }
+        	gModuleComments[modId] = new Object();
+        	gModuleComments[modId].error = "Failed to load comments."
             console.log(error);
         }
     });
+}
+
+function loadCommentsForArtifact(modId, artId){
+	gCommentPane = document.getElementById("commentsArea");
+	gCommentPane.innerHTML = "";
+	var modComments = gModuleComments[modId];
+	if ((modComments==null)||(modComments.error)){
+        if (modComments.error){
+            gCommentPane.innerHTML = "There was an error fetching the comments from the database. Please try again later.";
+        } else {
+        	gCommentPane.innerHTML = "The comments haven't been retrieved yet from the database. Please click the artifact again shortly.";
+        }
+	} else {
+		var comments = [];
+		for (c of modComments){
+			if (c.artifactId==artId){
+				comments.push(c);
+			}
+		}
+        gCommentPane.innerHTML = "";
+		if (comments.length>0){
+			for (c of comments){
+				addComment(gCommentPane, c);
+			}
+		}
+		addComment(gCommentPane);//Creates the "New Comment" item at the bottom.
+
+		setupShowHideResolvedCommentsButton();
+		setupShowHideOthersCommentsButton();
+		setupShowHideUnansweredCommentsButton();
+		if (gMyCommentText!="") {
+			document.getElementById("myCommentEntry").parentElement.classList.add("editing");
+			setTimeout(autoGrowMyComment, 80);
+		}
+		filterComments();
+		$('#newCommentContent').on('change keyup keydown paste cut', autoGrowMyComment);
+		$('#newCommentContent').on('keyup', trackComment);
+		$('#newCommentContent').on('keydown', saveReviewComment);
+		trackComment();
+		resize();
+	}
 }
 
 function addComment(parentElement, c=null){
@@ -406,13 +426,19 @@ function addComment(parentElement, c=null){
 	var comContainer = document.createElement("div");
 	var d = document.createElement("div");
 	comContainer.appendChild(d);
+	comContainer.classList.add("commentContainer");
+	comContainer.addEventListener("click", clickComment);
 	d.classList.add("comment");
 	if (c==null) { //Generate the new comment div.
 	    userName = UserNames[gMyUserId];
         userPhoto = getUserPhoto(gMyUserId);
         d.id = "myCommentEntry";
-        comDate = "<div id='btnSaveReviewComment' style='margin:-2px;float:right;'><svg onclick='saveReviewComment()' width='15' class='svgButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
-        content = "<textarea class='commentTextArea' id='newCommentContent' placeholder='Write a comment...' rows='1' autocomplete='off'>" + gMyCommentText + "</textarea>";
+        comDate = "<div id='btnSaveReviewComment' style='margin:-2px;float:right;'><svg width='15' class='svgButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
+        var cText = "";
+        if (gMyCommentText!=""){
+        	cText = gMyCommentText;
+        }
+        content = "<textarea class='commentTextArea' id='newCommentContent' placeholder='Write a comment...' rows='1' autocomplete='off'>" + cText + "</textarea>";
 	} else {
 		userName = UserNames[c.userId];
         userPhoto = getUserPhoto(c.userId);
@@ -435,6 +461,9 @@ function addComment(parentElement, c=null){
 	t+= "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + comDate + "</span></div>";
 	t+= content + "</td></tr></table>";
 	d.innerHTML = t;
+	if (d.getElementsByTagName("svg").length!=0){
+		$(d.getElementsByTagName("svg")[0]).on("click", saveReviewComment);
+	}
     addSubComments(comContainer, c);
 	parentElement.appendChild(comContainer);
 }
@@ -462,47 +491,108 @@ function addSubComments(parentElement, c){
 }
 
 function autoGrowMyComment(e){
-	var d = document.getElementById("newCommentContent");
+	var d;
+	if (e){
+        d = e.currentTarget;
+	} else {
+        d = document.getElementById("newCommentContent");
+	}
+	resize();
 	var pane= document.getElementById("artifactPane");
 	d.style.height = "0";
+	//FIXME need to fix this to keep reply in view. Only new comments are at the bottom.
 	d.style.height = d.scrollHeight;
 	pane.scrollTop = pane.scrollHeight;
 }
 
-function saveReviewComment(e=null){
+function saveReviewComment(e){
 	var saveComment = false;
-	if (e){
-        if (e.originalEvent.ctrlKey){
+	var textArea;
+
+    if (e.originalEvent.type=="click"){
+        saveComment = true
+        textArea = e.currentTarget.parentElement.parentElement.parentElement.parentElement.getElementsByTagName("textarea")[0];
+    } else {
+    	if (e.originalEvent.ctrlKey){
 			if (e.originalEvent.keyCode==83){
 				e.preventDefault();
                 saveComment = true;
+                textArea = e.currentTarget;
 			}
 		}
-	} else {
-		saveComment = true;
-	}
+    }
 	if (saveComment){
-		if (document.getElementById("newCommentContent").value == ""){
+		if (textArea.value == ""){
             alert("Can't save an empty comment.");
 		} else {
-			alert("Saving...");
+			alert("Saving..." + textArea.value);
 			
-			document.getElementById("newCommentContent").value = "";
-			autoGrowMyComment();
-			setTimeout(trackMyCommentText, 50);
+			textArea.value = "";
+			var controlPass = new Object()
+			controlPass.currentTarget = textArea;
+			autoGrowMyComment(controlPass);
+			setTimeout(trackComment(controlPass), 50);
 		}
 	}
 }
 
-function trackMyCommentText(){
-	gMyCommentText = document.getElementById("newCommentContent").value;
-	if (gMyCommentText !=""){
-		$("#btnSaveReviewComment").show();
-		document.getElementById("myCommentEntry").classList.add("editing");
+function trackComment(e){
+	var thisSaveButton;
+	var thisCommentContainer;
+	var thisText;
+	if (e==null){
+		thisSaveButton = document.getElementById("btnSaveReviewComment");
+		thisCommentContainer = document.getElementById("myCommentEntry").parentElement;
+		thisText = document.getElementById("newCommentContent").value;
 	} else {
-		document.getElementById("myCommentEntry").classList.remove("editing");
-		$("#btnSaveReviewComment").hide();
+		thisCommentContainer = e.currentTarget.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement;
+		thisSaveButton = thisCommentContainer.getElementsByTagName("svg")[0].parentElement;
+		thisText = e.currentTarget.value;
+		if (e.currentTarget.id == "newCommentContent"){
+			gMyCommentText = thisText;
+		}
 	}
+	if (thisText!=""){
+		thisCommentContainer.classList.add("editing");
+		thisSaveButton.classList.add("visible");
+		thisSaveButton.classList.remove("hidden");
+	} else {
+		thisCommentContainer.classList.remove("editing");
+		thisSaveButton.classList.remove("visible");
+		thisSaveButton.classList.add("hidden");
+	}
+}
+
+function clickComment(e){
+	var d = e.currentTarget;
+	var replyDivCheck = d.getElementsByClassName("replyEditor");
+	var isCommentCreateDiv = (d.firstChild.id=="myCommentEntry");
+	if ((replyDivCheck.length==0)&&(!isCommentCreateDiv)){
+		addReplyDiv(d);
+	}
+}
+
+function addReplyDiv(toDiv){
+	var d = document.createElement("div");
+	d.classList.add("subComment");
+	d.classList.add("replyEditor");
+	var userName = UserNames[gMyUserId];
+	var userPhoto = getUserPhoto(gMyUserId);
+	d.id = "replyToDiv";
+	var saveButton = "<div class='hidden' style='margin:-2px;float:right;'><svg width='15' class='svgButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
+	content = "<textarea class='commentTextArea' placeholder='Reply...' rows='1' autocomplete='off'></textarea>";
+	var t = "<table style='width:100%;'><tr><td style='width:30px;'><img class='subCommentAvatar' src='";
+	t += userPhoto + "'></td><td style='width:calc(100% - 30px);padding-left:6px;vertical-align:top'>";
+	t += "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + saveButton + "</span></div>";
+	t += content + "</td></tr></table>";
+	d.innerHTML = t;
+	var saveButton = d.getElementsByTagName("svg")[0];
+	var ta = d.getElementsByTagName("textarea")[0];
+	$(ta).on('change keyup keydown paste cut', autoGrowMyComment);
+	$(ta).on('keyup', trackComment);
+	$(ta).on('keydown', saveReviewComment);
+	$(saveButton).on('click', saveReviewComment)
+	toDiv.appendChild(d);
 }
 
 function hideLoader(){
@@ -533,6 +623,7 @@ function loadArtifactsInBackground() {
     var moduleIds = Object.keys(gModules);
     for (var mId of moduleIds) {
         loadModuleInfo(mId);
+        loadModuleComments(mId, curChangeSet);
     }
 }
 
@@ -642,7 +733,8 @@ function populateArtifactRow(response) {
     artText.innerHTML = output;
     artRow.addEventListener("click", clickArtifact);
     gModules[modId].pendingRequests--;
-    loadingText(modId, "Retrieving " + gModules[modId].pendingRequests + " items");
+    var pc = Math.round(100*(gModules[modId].totalRequests - gModules[modId].pendingRequests)/gModules[modId].totalRequests);
+    loadingText(modId, "Loading " + pc + "%");
     if (gModules[modId].pendingRequests == 0) {
         if (!gArtifactsRequested) {
             if (!gCancelInitialNext){
@@ -661,7 +753,7 @@ function populateArtifactRow(response) {
         if (allModulesLoaded){
         	populateReviewerInfo();
         }
-        resized();
+        resize();
     }
 }
 
@@ -948,10 +1040,11 @@ function showReview() {
         if (!firstModule){ //Setup first Module Div to load fast
             firstModule = gMod.id;
             gMod.div.style = "display:block";
-            resized();
+            resize();
         }
     }
     loadModuleInfo(firstModule);
+    loadModuleComments(firstModule, curChangeSet);
 }
 
 function loadModuleInfo(modId){
@@ -960,6 +1053,7 @@ function loadModuleInfo(modId){
         gModules[modId].artifactDetailsLoaded = true;
         var firstRow = true;
         gModules[modId].pendingRequests = m.artifacts.length;
+        gModules[modId].totalRequests = m.artifacts.length;
         for (var a of m.artifacts) {
             //Adds artifact divs to the module view to be loaded async.
             var d;
@@ -998,6 +1092,7 @@ function loadModuleInfo(modId){
             
             if (a.isChanged) {
                 gModules[modId].pendingRequests++;
+                gModules[modId].totalRequests++;
                 if (gArtifacts["m" + modId + "cs" + a.id]) {
                     populateArtifactRow(gArtifacts["m" + modId + "cs" + a.id]);
                 } else {
@@ -1012,7 +1107,7 @@ function loadModuleInfo(modId){
             }
         }
         if (gModules[modId].pendingRequests > 0) {
-            startLoading(modId, "Retrieving " + gModules[modId].pendingRequests + " items");
+            startLoading(modId, "Loading 5%");
         }
     }
 }
@@ -1288,6 +1383,57 @@ function prevChange() {
     setSelArtifact();
 }
 
+
+function nextArtWComments() {
+    gCurrentArtIndex++;
+    var nextFound = false;
+    for (i = gCurrentArtIndex; i<gOrderedArtifacts.length; i++){
+    	var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+        if (gArtifactsWithShownComments.indexOf(divId)!=-1){
+			nextFound = true;
+			gCurrentArtIndex = i;
+			break;
+        }
+    }
+    if (!nextFound){
+        alert("Reached the last artifact with comments matching the filter! Continuing from start.");
+        gCurrentArtIndex = 0;//Start from beginning if none found after.
+        for (i = gCurrentArtIndex; i<gOrderedArtifacts.length; i++){
+            var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+			if (gArtifactsWithShownComments.indexOf(divId)!=-1){
+				gCurrentArtIndex = i;
+				break;
+            }
+        }
+    }
+    setSelArtifact();
+}
+
+function prevArtWComments() {
+    gCurrentArtIndex--;
+    var prevFound = false;
+    for (i = gCurrentArtIndex; i >= 0; i--){
+        var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+        if (gArtifactsWithShownComments.indexOf(divId) !=- 1){
+			prevFound = true;
+			gCurrentArtIndex = i;
+			break;
+        }
+    }
+    if (!prevFound){
+        alert("Reached the first artifact with comments matching the filter! Continuing from end.");
+        gCurrentArtIndex = gOrderedArtifacts.length-1;//Start from end if none found before.
+        for (i = gCurrentArtIndex; i >= 0; i--){
+            var divId = "m" + gOrderedArtifacts[i].ModuleId + "a" + gOrderedArtifacts[i].ArtifactId;
+            if (gArtifactsWithShownComments.indexOf(divId) !=- 1){
+				gCurrentArtIndex = i;
+				break;
+            }
+        }
+    }
+    setSelArtifact();
+}
+
 function setSelArtifact() {
 
     var newSel = gOrderedArtifacts[gCurrentArtIndex];
@@ -1447,7 +1593,7 @@ function filterComments(){
     var oDivs = gCommentPane.getElementsByClassName("anothersComment");
     var uDivs = gCommentPane.getElementsByClassName("unansweredComment");
     var unresolvedCommentsCount = gCommentPane.children.length - rDivs.length -1; //Extra 1 is the "New Comment" entry
-    document.getElementById("commentSummary").innerHTML = unresolvedCommentsCount + " Unresolved Comments"
+    document.getElementById("commentSummary").innerHTML = unresolvedCommentsCount + " Unresolved";
     //First, show all that should be shown
     if (gShowOthersComments){
     	for (d of oDivs){
@@ -1479,6 +1625,32 @@ function filterComments(){
     	for (d of uDivs){
         	$(d).hide();
         }
+    }
+    
+    gArtifactsWithShownComments = [];
+    for (var modId in gModuleComments){
+    	for (var cIndex in gModuleComments[modId]){
+    		var show = true;
+    		var c = gModuleComments[modId][cIndex];
+    		if (!gShowOthersComments){
+                if (c.userId!=gMyUserId){
+                	show = false;
+                }
+    		}
+    		if (!gShowResolvedComments){
+                if (c.state=="Resolved"){
+                	show = false;
+                }
+    		}
+            if (!gShowUnansweredComments){
+                if (c.state=="Resolved"){
+                	//FIXME This needs to be implemented
+                }
+    		}
+            if (show){
+                gArtifactsWithShownComments.push("m" + modId + "a" + c.artifactId);
+            }
+    	}
     }
 
 
