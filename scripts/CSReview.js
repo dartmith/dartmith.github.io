@@ -60,6 +60,7 @@ function startNewReview(){
     curChangeSetName = "";
     gLatestChange = "";
     gShowNewChangesOnly = false;
+    gModuleComments = new Object();
     gReviewerInfo = new Object();
 
     
@@ -354,25 +355,37 @@ function showLoader(){
 }
 
 function loadModuleComments(modId, changesetId){
-    gModuleComments[modId] = null;
-    $.ajax({
-        async:true,
-        url: "https://maximus/files/CSReviewComments/getComments.php",
-        success:function(data){
-            gModuleComments[modId] = [];
-            var comments = $.parseJSON(data);
-			if (comments.length>0){
-				for (c of comments){
-					gModuleComments[modId].push(c);
+	if (!gModuleComments[modId]){
+		gModuleComments[modId] = null;
+		$.ajax({
+			async:true,
+			url: "https://maximus/files/CSReviewComments/getComments.php",
+			success:function(data){
+				gModuleComments[modId] = [];
+				var comments = $.parseJSON(data);
+				if (comments.length>0){
+					for (c of comments){
+						gModuleComments[modId].push(c);
+					}
 				}
+				var gotAllComments = true;
+				for (var key in gModuleComments){
+					if (gModuleComments[key] == null) {
+						gotAllComments = false;
+					}
+				}
+				if (gotAllComments){
+					populateCommentCounts();
+				}
+
+			},
+			error:function(error){
+				gModuleComments[modId] = new Object();
+				gModuleComments[modId].error = "Failed to load comments."
+				console.log(error);
 			}
-        },
-        error:function(error){
-        	gModuleComments[modId] = new Object();
-        	gModuleComments[modId].error = "Failed to load comments."
-            console.log(error);
-        }
-    });
+		});
+	}
 }
 
 function loadCommentsForArtifact(modId, artId){
@@ -383,7 +396,7 @@ function loadCommentsForArtifact(modId, artId){
         if (modComments.error){
             gCommentPane.innerHTML = "There was an error fetching the comments from the database. Please try again later.";
         } else {
-        	gCommentPane.innerHTML = "The comments haven't been retrieved yet from the database. Please click the artifact again shortly.";
+        	gCommentPane.innerHTML = "Comments are still loading! Please click the artifact again shortly.";
         }
 	} else {
 		var comments = [];
@@ -444,12 +457,13 @@ function addComment(parentElement, c=null){
         userPhoto = getUserPhoto(c.userId);
         var dateObj = getTimeLabel(c.date);
         comDate = "<span " + dateObj.title + ">" + dateObj.timeAgo + "</span>";
-        content = c.content;
+        content = c.commentText;
         state = c.state;
         resolveIcon = "<svg viewBox='0 0 20 20'><path d='M0 11l2-2 5 5L18 3l2 2L7 18z'/></svg>";
         if (c.userId!=gMyUserId){
         	comContainer.classList.add("anothersComment");
         }
+        comContainer.setAttribute("commentId", c.id);
 	}
 	
 	if (state=="Resolved"){
@@ -478,7 +492,7 @@ function addSubComments(parentElement, c){
 				var userPhoto = getUserPhoto(sc.userId);
 				var dateObj = getTimeLabel(sc.date);
 				comDate = "<span " + dateObj.title + ">" + dateObj.timeAgo + "</span>";
-				content = sc.content;
+				content = sc.commentText;
             	var t = "<table style='width:100%;'><tr><td style='width:30px;'><img class='subCommentAvatar' src='";
 				t += userPhoto + "'></td><td style='width:calc(100% - 30px);padding-left:6px;vertical-align:top'>";
 				t+= "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + comDate + "</span></div>";
@@ -508,7 +522,8 @@ function autoGrowMyComment(e){
 function saveReviewComment(e){
 	var saveComment = false;
 	var textArea;
-
+	
+    
     if (e.originalEvent.type=="click"){
         saveComment = true
         textArea = e.currentTarget.parentElement.parentElement.parentElement.parentElement.getElementsByTagName("textarea")[0];
@@ -521,13 +536,32 @@ function saveReviewComment(e){
 			}
 		}
     }
+    
 	if (saveComment){
 		if (textArea.value == ""){
             alert("Can't save an empty comment.");
 		} else {
+			var comContainer = textArea.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement;
+			var replyTo = "";
+			if (comContainer.attributes["commentId"]){
+                replyTo = comContainer.attributes["commentId"].value;
+			}
 			alert("Saving..." + textArea.value);
 			
+			var c = new Object();
+			var csArtId = curSelection.ArtifactId.replace("a", "cs");
+			c.artifactId = Number(curSelection.ArtifactId.substr(curSelection.ArtifactId.indexOf("a") + 1));
+			c.moduleId = Number(curSelection.ModuleId);
+			c.changeSetId = curChangeSet;
+			c.userId = gMyUserId;
+			c.artifactLastModified = gArtifacts[csArtId][0].modified;
+			c.commentDate = new Date().toISOString();
+			c.commentText = textArea.value;
+            c.replyTo = replyTo;
+            
+            //POST c to the comment save php file.
 			textArea.value = "";
+
 			var controlPass = new Object()
 			controlPass.currentTarget = textArea;
 			autoGrowMyComment(controlPass);
@@ -690,7 +724,7 @@ function populateArtifactRow(response) {
     var artRow = document.getElementById("m" + modId + "a" + a.identifier);
     var artText = document.getElementById("m" + modId + "a" + a.identifier);
     var fromChangeset;
-    if (gChangedArtIDs.indexOf(a.identifier)!=0){//Track Latest Modified date for clearing review approvals
+    if (gChangedArtIDs.indexOf(a.identifier)!=-1){//Track Latest Modified date for clearing review approvals
         var aLastModified = a.modified;
         if (aLastModified> gLatestChange){
             gLatestChange = aLastModified;
@@ -744,42 +778,100 @@ function populateArtifactRow(response) {
             loadArtifactsInBackground();
         }
         endLoading(modId);
-        var allModulesLoaded = true;
-        for (var key of Object.keys(gModules)){
-        	if (gModules[key].pendingRequests > 0 ){
-        		allModulesLoaded = false;
-        	}
-        }
-        if (allModulesLoaded){
-        	populateReviewerInfo();
-        }
+        populateReviewerInfo();
         resize();
     }
 }
 
-function populateReviewerInfo(){
-	var iDiv = document.getElementById("prReviewersInfo");
-	for (var userId of Object.keys(gReviewerInfo)){
-		var pc = 1;
-		if (gReviewerInfo[userId].artifactsNotReviewed.length>0){
-            pc = 1 - (gReviewerInfo[userId].artifactsNotReviewed.length/gChangedArtIDs.length);
-            if (pc > 0.99){
-            	pc = 0.99; //Ensure that someone with artifacts not reviewed gets a 99%.
-            }
+function populateCommentCounts(){
+	var infoDiv = document.getElementById("prCommentsInfo");
+	var unresolved = 0;
+	var resolved = 0;
+	var commentsPlusReplies = 0;
+    
+	for (var modId in gModuleComments){
+		var moduleComments = gModuleComments[modId];
+		for (var c of moduleComments){
+			if (gChangedArtIDs.indexOf(c.artifactId.toString())!=-1){
+				var cResolved = (c.state=="Resolved");
+				if (cResolved){
+					resolved++;
+				} else {
+					unresolved++;
+				}
+				commentsPlusReplies++;
+				if (c.replies){
+					commentsPlusReplies += c.replies.length;
+				}
+
+				if (gReviewerInfo[c.userId]){
+					if (cResolved){
+						gReviewerInfo[c.userId].resolvedThreads++;
+					} else {
+						gReviewerInfo[c.userId].unresolvedThreads++;
+					}
+				} else {
+					var userInfo = new Object();
+					userInfo.userName = UserNames[c.userId];
+					userInfo.artifactsNotReviewed = [];
+					if (cResolved){
+						userInfo.resolvedThreads = 1;
+						userInfo.unresolvedThreads = 0;
+					} else {
+						userInfo.resolvedThreads = 0;
+						userInfo.unresolvedThreads = 1;
+					}
+					gReviewerInfo[c.userId] = userInfo;
+				}
+			}
 		}
-        pc = Math.round(pc*100);
-		iDiv.innerHTML += gReviewerInfo[userId].userName + " - " + pc + "% Complete";
 	}
-	if (gReviewerInfo[gMyUserId]){
-		var artsToReview = gReviewerInfo[gMyUserId].artifactsNotReviewed;
-		if (artsToReview.length == 0){
-			alert("There are no artifact changes since you last marked this review as complete. If you are expecting additional fixes, you'll have wait a little longer.");
-            showReviewAsFinished();
-		} else {
-			if (confirm(artsToReview.length + " artifacts were modified since you reviewed this.\n\nPress 'OK' to update the next/previous buttons to navigate *only* between the new changes.\n\nMark your review as complete when you are finished again.")){
-			    gShowNewChangesOnly = true;
-			    gCurrentArtIndex = 0;
-			    nextChange();
+    infoDiv.innerHTML = unresolved + " Unresolved Threads<br>" + resolved + " Resolved Threads<br>" + (unresolved + resolved) + " Total Threads<br>" + commentsPlusReplies + " Total Comments";
+    populateReviewerInfo();
+}
+
+function populateReviewerInfo(){
+	var allModulesLoaded = true;
+	for (var key of Object.keys(gModules)){
+		if (gModules[key].pendingRequests > 0 ){
+			allModulesLoaded = false;
+		}
+	}
+	var allCommentsLoaded = (!(document.getElementById("prCommentsInfo").innerHTML == "Loading..."));
+
+	if (allModulesLoaded && allCommentsLoaded){
+
+		var tBody = document.getElementById("reviewerInfoBody");
+		var rInfo = "";
+		for (var userId of Object.keys(gReviewerInfo)){
+			var pc = 0;
+			if (gReviewerInfo[userId].reviewed){
+				pc = 1;
+				if (gReviewerInfo[userId].artifactsNotReviewed.length>0){
+					pc = 1 - (gReviewerInfo[userId].artifactsNotReviewed.length/gChangedArtIDs.length);
+					if (pc > 0.99){
+						pc = 0.99; //Ensure that someone with artifacts not reviewed gets a 99%.
+					}
+				}
+			}
+			pc = Math.round(pc*100);
+			rInfo += "<tr><td style='text-align:left;padding-left:10px;'>" + gReviewerInfo[userId].userName + "</td><td>" + gReviewerInfo[userId].unresolvedThreads + "</td><td>" + gReviewerInfo[userId].resolvedThreads + "</td><td>" + pc + "%</td></tr>";
+		}
+
+		tBody.innerHTML = rInfo;
+		if (gReviewerInfo[gMyUserId]){
+			if (gReviewerInfo[gMyUserId].reviewed){
+				var artsToReview = gReviewerInfo[gMyUserId].artifactsNotReviewed;
+				if (artsToReview.length == 0){
+					alert("There are no artifact changes since you last marked this review as complete. If you are expecting additional fixes, you'll have wait a little longer.");
+					showReviewAsFinished();
+				} else {
+					if (confirm(artsToReview.length + " artifacts were modified since you reviewed this.\n\nPress 'OK' to update the next/previous buttons to navigate *only* between the new changes.\n\nMark your review as complete when you are finished again.")){
+						gShowNewChangesOnly = true;
+						gCurrentArtIndex = 0;
+						nextChange();
+					}
+				}
 			}
 		}
 	}
@@ -826,13 +918,17 @@ function loadReviewerInfo(response){
 					var userInfo = new Object();
 					userInfo.userName = c.creator.name;
 					userInfo.userId = c.creator.userId;
+					userInfo.reviewed = true;
 					userInfo.artifactsNotReviewed = [];
+					userInfo.resolvedThreads = 0;
+					userInfo.unresolvedThreads = 0;
 					var lModText = cT.substr(cT.indexOf(lModMarker) + lModMarker.length);
 					userInfo.lastModified = lModText.substr(0, lModText.indexOf("&quot;"));
 					if (gReviewerInfo[userInfo.userId]){
 						if (userInfo.lastModified > gReviewerInfo[userInfo.userId].lastModified){
 							gReviewerInfo[userInfo.userId].lastModified = userInfo.lastModified;
 						}
+						gReviewerInfo[userInfo.userId].reviewed = true;
 					} else {
 						gReviewerInfo[userInfo.userId] = userInfo;
 					}
@@ -936,6 +1032,8 @@ function processTypesResponse(response) {
 
 function showReview() {
     hideLoader();
+    document.getElementById("prCommentsInfo").innerHTML = "Loading...";
+    document.getElementById("reviewerInfoBody").innerHTML = "<tr><td>Loading...</td></tr>";
     var container = document.getElementById("reviewContainer");
     container.innerHTML = "";
     //Depends on processTypesResponse and processComparisonData to be returned
@@ -1472,12 +1570,17 @@ function finishReview(){
             bText.innerHTML = "Updating Review..."
             //Normal methods of hiding html elements were stripped by EWM. Resorted to making an a with no text and it works!
             var hiddenInfo = "<a href='https://review.info?lastModified=\"" + gLatestChange + "\"'></a>";
+            var msgText;
             if (gReviewerInfo[gMyUserId]){
-                addWIComment("Reviewed " + gReviewerInfo[gMyUserId].artifactsNotReviewed.length + " additional changes to " + CSLink + "." + hiddenInfo);
+            	if (gReviewerInfo[gMyUserId].artifactsNotReviewed.length > 0 ){
+            		msgText = "Reviewed " + gReviewerInfo[gMyUserId].artifactsNotReviewed.length + " additional changes to";
+            	} else {
+            		msgText = "Done reviewing";
+            	}
             } else {
-            	addWIComment("Done reviewing " + CSLink + "." + hiddenInfo);
+            	msgText = "Done reviewing";
             }
-            
+            addWIComment(msgText + " " + CSLink + "." + hiddenInfo);
         }
     } 
 }

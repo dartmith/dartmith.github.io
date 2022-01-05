@@ -52,6 +52,20 @@ height: 100%;
 #workItemInputError{
     margin-left: calc(50% - 90px);
 }
+
+#reviewerInfoTable{
+    width:100%;
+    text-align:center;
+
+}
+
+#reviewerInfoTable th{
+    padding:4 0;
+}
+
+.headerSVG{
+    width:15px;
+}
 .error{
     border:1px #ff5151 solid;
     border-radius:25px;
@@ -133,7 +147,6 @@ padding: 5px;
     background-color:#f8f8f8;
     font-weight:bold;
 }
-
 
 .textContent {margin:0;
     padding: 3 10;
@@ -281,7 +294,7 @@ h5.textContent {font-size: 11pt;}
 
 p {margin:0px;}
 
-table{border-spacing:0;border-collapse:collapse;}
+table{border-spacing:0;border-collapse:collapse;font-size:10pt;}
 
 ins{background-color:#e0ffe0;}
 del{background-color:#ffd6d6da;}
