@@ -328,19 +328,19 @@ del{background-color:#ffd6d6da;}
 }
 
 .Resolved {
+    cursor:default !important;
     border:2px solid #aac5bf;
     background-color:#d0ece2;
 }
+
+.Resolved:hover {
+    background-color: #d0ece2;
+}
+
 .editing {
     border:2px solid #5ac5ff;
     background-color: aliceblue;
     transition: background-color 0.1s linear;
-}
-.replyEditor{
-    font-color:red;
-}
-.Resolved:hover {
-    background-color: #d0ece2;
 }
 
 .commentHeader{

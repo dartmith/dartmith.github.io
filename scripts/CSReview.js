@@ -331,10 +331,10 @@ function setupShowHideUnansweredCommentsButton(){
     var shIcon = document.getElementById("showHideUnansweredCommentsIcon");
     var shText = document.getElementById("showHideUnansweredCommentsTipText");
 	if (gShowUnansweredComments){
-		shText.innerHTML = "Click to hide comments you've answered.\nThis hides comments where no replies or artifact changes were made since your last reply.";
+		shText.innerHTML = "Click to hide answered comments.\nThis hides comments where you have the latest reply (no replies or changes to the artifact were made since your latest reply.";
 		shIcon.setAttribute("d", "M10 20a10 10 0 1 1 0-20 10 10 0 0 1 0 20zM7.88 7.88l-3.54 7.78 7.78-3.54 3.54-7.78-7.78 3.54zM10 11a1 1 0 1 1 0-2 1 1 0 0 1 0 2z");
 	} else {
-		shText.innerHTML = "Comment's you've answered are hidden.\nClick to show comments that you've answered.";
+		shText.innerHTML = "Comment's you've already answered are hidden.\nClick to show comments that you've answered.";
 		shIcon.setAttribute("d", "M10 20a10 10 0 1 1 0-20 10 10 0 0 1 0 20zm1-5h1a3 3 0 0 0 0-6H7.99a1 1 0 0 1 0-2H14V5h-3V3H9v2H8a3 3 0 1 0 0 6h4a1 1 0 1 1 0 2H6v2h3v2h2v-2z");
 	}
 }
@@ -352,6 +352,32 @@ function showLoader(){
     var lDiv = document.getElementById("loadingInfo");
 	lDiv.classList.remove("hidden");
 	lDiv.classList.add("visible");
+}
+
+function reloadAllCommentsInBackground(){
+	$.ajax({
+		async:true,
+		url: "https://maximus/files/CSReviewComments/getComments.php?changeSetId=\"" + curChangeSet + "\"",
+		success:function(data){
+			gModuleComments = new Object();
+			var comments = $.parseJSON(data);
+			if (comments.length>0){
+				for (c of comments){
+					if (!(gModuleComments[c.moduleId])){
+						gModuleComments[c.moduleId] = [];
+					}
+					gModuleComments[c.moduleId].push(c);
+				}
+			}
+			populateCommentCounts();
+			filterComments();
+		},
+		error:function(error){
+			gModuleComments[modId] = new Object();
+			gModuleComments[modId].error = "Failed to load comments."
+			console.log(error);
+		}
+	});
 }
 
 function loadModuleComments(modId, changesetId){
@@ -435,7 +461,7 @@ function addComment(parentElement, c=null){
 	var comDate = "";
 	var content = "";
 	var state = null;
-	var resolveIcon = null;
+	var resolveButton = "";
 	var comContainer = document.createElement("div");
 	var d = document.createElement("div");
 	comContainer.appendChild(d);
@@ -446,7 +472,7 @@ function addComment(parentElement, c=null){
 	    userName = UserNames[gMyUserId];
         userPhoto = getUserPhoto(gMyUserId);
         d.id = "myCommentEntry";
-        comDate = "<div id='btnSaveReviewComment' style='margin:-2px;float:right;'><svg width='15' class='svgButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
+        comDate = "<div id='btnSaveReviewComment' style='margin:-2px;float:right;'><svg width='15' class='svgButton saveButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
         var cText = "";
         if (gMyCommentText!=""){
         	cText = gMyCommentText;
@@ -457,12 +483,19 @@ function addComment(parentElement, c=null){
         userPhoto = getUserPhoto(c.userId);
         var dateObj = getTimeLabel(c.date);
         comDate = "<span " + dateObj.title + ">" + dateObj.timeAgo + "</span>";
-        content = c.commentText;
-        state = c.state;
-        resolveIcon = "<svg viewBox='0 0 20 20'><path d='M0 11l2-2 5 5L18 3l2 2L7 18z'/></svg>";
-        if (c.userId!=gMyUserId){
+
+        if (c.userId==gMyUserId){ //Allow only the comment author to mark their comment as resolved.
+            resolveButton += "<div style='margin-top:-3px;float:right;''><svg width='12' class='svgButton resolveButton' style='fill:green;' viewBox='0 0 20 20'><title>Mark Thread Resolved</title><path d='M0 11l2-2 5 5L18 3l2 2L7 18z'/></svg></div>";
+        } else {
         	comContainer.classList.add("anothersComment");
         }
+        
+        
+        if (isUnanswered(c)){
+        	comContainer.classList.add("unansweredComment");
+        }
+        content = c.commentText;
+        state = c.state;
         comContainer.setAttribute("commentId", c.id);
 	}
 	
@@ -472,14 +505,64 @@ function addComment(parentElement, c=null){
 
 	var t = "<table style='width:100%;'><tr><td style='width:48px;'><img class='commentAvatar' src='";
 	t += userPhoto + "'></td><td style='width:calc(100% - 48px);padding-left:6px;vertical-align:top'>";
-	t+= "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + comDate + "</span></div>";
+	t+= "<div class='commentHeader'><span class='userName'>" + userName + "</span>" + resolveButton + "<span class='commentDate'>" + comDate + "</span></div>";
 	t+= content + "</td></tr></table>";
 	d.innerHTML = t;
-	if (d.getElementsByTagName("svg").length!=0){
-		$(d.getElementsByTagName("svg")[0]).on("click", saveReviewComment);
+	var buttons = d.getElementsByTagName("svg");
+	if (buttons.length!=0){
+		for (btn of buttons){
+			if (btn.classList.contains("saveButton")){
+				$(btn).on("click", saveReviewComment);
+			}
+			if (btn.classList.contains("resolveButton")){
+				$(btn).on("click", resolveReviewComment);
+			}
+		}
+		
 	}
     addSubComments(comContainer, c);
 	parentElement.appendChild(comContainer);
+}
+
+function isUnanswered(c){
+	var csArtId = "m" + c.moduleId + "cs" + c.artifactId;
+	var lastModBy = gArtifacts[csArtId][0].contributor.resource;
+	var artModified = gArtifacts[csArtId][0].modified;
+	lastModBy = lastModBy.substr(lastModBy.lastIndexOf("/")+1);
+
+	var lmdOthersLastReply = "0";
+	var lmdMyLastReply = "0";
+
+	if (c.userId==gMyUserId){
+		lmdMyLastReply = c.commentDate;
+	} else {
+		lmdOthersLastReply = c.commentDate;
+	}
+
+	if (c.replies){
+		for (rep of c.replies){
+			if (rep.userId == gMyUserId){
+				lmdMyLastReply = rep.commentDate;
+			} else {
+				lmdOthersLastReply = rep.commentDate;
+			}
+		}
+	}
+
+	if (lastModBy==gMyUserId){
+		if (artModified>lmdMyLastReply){
+			lmdMyLastReply = artModified;
+		}
+	} else {
+		if (artModified>lmdOthersLastReply){
+			lmdOthersLastReply = artModified;
+		}
+	}
+	if (lmdMyLastReply < lmdOthersLastReply){
+		return true;
+	} else {
+		return false;
+	}
 }
 
 function addSubComments(parentElement, c){
@@ -514,9 +597,20 @@ function autoGrowMyComment(e){
 	resize();
 	var pane= document.getElementById("artifactPane");
 	d.style.height = "0";
-	//FIXME need to fix this to keep reply in view. Only new comments are at the bottom.
 	d.style.height = d.scrollHeight;
-	pane.scrollTop = pane.scrollHeight;
+}
+
+function resolveReviewComment(e){
+    var comContainer = e.currentTarget.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement;
+	var commentId = "";
+	if (comContainer.attributes["commentId"]){
+		commentId = comContainer.attributes["commentId"].value;
+		//FIXME need to make a POST to close this comment.
+		comContainer.classList.add("resolved");
+		$(e.target).hide();
+	} else {
+		alert("Could not find the comment ID. Can't resolve this comment. Contact Dave to troubleshoot.");
+	}
 }
 
 function saveReviewComment(e){
@@ -580,7 +674,7 @@ function trackComment(e){
 		thisText = document.getElementById("newCommentContent").value;
 	} else {
 		thisCommentContainer = e.currentTarget.parentElement.parentElement.parentElement.parentElement.parentElement.parentElement;
-		thisSaveButton = thisCommentContainer.getElementsByTagName("svg")[0].parentElement;
+		thisSaveButton = thisCommentContainer.getElementsByClassName("saveButton")[0].parentElement;
 		thisText = e.currentTarget.value;
 		if (e.currentTarget.id == "newCommentContent"){
 			gMyCommentText = thisText;
@@ -598,11 +692,15 @@ function trackComment(e){
 }
 
 function clickComment(e){
-	var d = e.currentTarget;
-	var replyDivCheck = d.getElementsByClassName("replyEditor");
-	var isCommentCreateDiv = (d.firstChild.id=="myCommentEntry");
-	if ((replyDivCheck.length==0)&&(!isCommentCreateDiv)){
-		addReplyDiv(d);
+	if (!((e.target.tagName=="svg")||(e.target.tagName=="path"))){
+		if (!(e.currentTarget.classList.contains("resolved"))){
+			var d = e.currentTarget;
+			var replyDivCheck = d.getElementsByClassName("replyEditor");
+			var isCommentCreateDiv = (d.firstChild.id=="myCommentEntry");
+			if ((replyDivCheck.length==0)&&(!isCommentCreateDiv)){
+				addReplyDiv(d);
+			}
+		}
 	}
 }
 
@@ -613,11 +711,11 @@ function addReplyDiv(toDiv){
 	var userName = UserNames[gMyUserId];
 	var userPhoto = getUserPhoto(gMyUserId);
 	d.id = "replyToDiv";
-	var saveButton = "<div class='hidden' style='margin:-2px;float:right;'><svg width='15' class='svgButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
+	var saveButtonHTML = "<div class='hidden' style='margin:-2px;float:right;'><svg width='15' class='svgButton saveButton' viewBox='0 0 20 20'><title>Save Comment (Ctrl+S)</title><path d='M0 2C0 .9.9 0 2 0h14l4 4v14a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm5 0v6h10V2H5zm6 1h3v4h-3V3z'/></svg></div>";
 	content = "<textarea class='commentTextArea' placeholder='Reply...' rows='1' autocomplete='off'></textarea>";
 	var t = "<table style='width:100%;'><tr><td style='width:30px;'><img class='subCommentAvatar' src='";
 	t += userPhoto + "'></td><td style='width:calc(100% - 30px);padding-left:6px;vertical-align:top'>";
-	t += "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + saveButton + "</span></div>";
+	t += "<div class='commentHeader'><span class='userName'>" + userName + "</span><span class='commentDate'>" + saveButtonHTML + "</span></div>";
 	t += content + "</td></tr></table>";
 	d.innerHTML = t;
 	var saveButton = d.getElementsByTagName("svg")[0];
@@ -625,7 +723,7 @@ function addReplyDiv(toDiv){
 	$(ta).on('change keyup keydown paste cut', autoGrowMyComment);
 	$(ta).on('keyup', trackComment);
 	$(ta).on('keydown', saveReviewComment);
-	$(saveButton).on('click', saveReviewComment)
+	$(saveButton).on('click', saveReviewComment);
 	toDiv.appendChild(d);
 }
 
@@ -1254,7 +1352,7 @@ function idEntered() {
     hideWIInfo();
     var workItemId = document.getElementById("workItemInput").value;
     if (workItemId!=""){
-        const url = 'https://maximus:9443/ccm/rpt/repository/workitem?fields=workitem/workItem[id=' + workItemId + ']/(id|summary|auditableLinks/*/*)';
+        const url = RTCURL() + 'rpt/repository/workitem?fields=workitem/workItem[id=' + workItemId + ']/(id|summary|auditableLinks/*/*)';
         getREST(url, processChangeSets);
     }
 }
@@ -1287,10 +1385,16 @@ function processChangeSets(response){
                 }
             }
             pendingRequests = 0;
-            changeSets.forEach(changeSet=>{
-                pendingRequests++;
-                getREST(changeSet, addChangeSetInfo);
-            });
+            if (changeSets.length==0){
+            	document.getElementById("changeSetDeliveredItems").innerHTML = "None"
+            	document.getElementById("changeSetReviewItems").innerHTML = "None";
+            } else {
+            	changeSets.forEach(changeSet=>{
+					pendingRequests++;
+					getREST(changeSet, addChangeSetInfo);
+				});
+            }
+            
         }
     } else {
         showWIError();
@@ -1298,7 +1402,7 @@ function processChangeSets(response){
 }
 
 function addChangeSetInfo(response){
-    pendingRequests--;
+   pendingRequests--;
     var changeSetInfo = response[0];
     var changeSetTitle = changeSetInfo['dcterms:title'];
     var csCreator ="";
@@ -1746,8 +1850,8 @@ function filterComments(){
                 }
     		}
             if (!gShowUnansweredComments){
-                if (c.state=="Resolved"){
-                	//FIXME This needs to be implemented
+                if (isUnanswered(c)){
+                	show = false;
                 }
     		}
             if (show){

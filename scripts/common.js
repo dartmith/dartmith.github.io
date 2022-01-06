@@ -637,7 +637,7 @@ function DOORSURL(){
             return "https://apsmxgc-omrrrc.b1515cl.hill.af.mil:9443/rm/";
             break;
 		case 'ODE':
-            return "https://doors.mmc.mil/rm5";
+            return "https://doors.mmc.mil/rm";
             break;
         default:
         return applicationURL();
